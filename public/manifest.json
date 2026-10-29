@@ -1,0 +1,9 @@
+{
+  "name": "高校野球シミュレーション5 (KokoSim 5)",
+  "short_name": "KokoSim 5",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0b1730",
+  "theme_color": "#112244"
+}

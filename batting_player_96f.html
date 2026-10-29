@@ -1,0 +1,2060 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚾ KokoSim 5 - 96フレーム打撃アニメーションスタジオ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: #090d16;
+      color: #f1f5f9;
+      padding: 16px;
+      line-height: 1.4;
+      user-select: none;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1e293b;
+      margin-bottom: 12px;
+    }
+    .title-area h1 {
+      font-size: 20px;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge-v6 {
+      background: #dc2626;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* メイングリッド */
+    .studio-container {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+    }
+    @media (max-width: 1200px) {
+      .studio-container { grid-template-columns: 1fr; }
+    }
+
+    /* ビューポートエリア */
+    .viewport-card {
+      background: #111827;
+      border: 1px solid #1f293d;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .viewport-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+      padding: 8px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid #334155;
+    }
+    .view-modes {
+      display: flex;
+      gap: 6px;
+    }
+    .tab-btn {
+      background: #0f172a;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { background: #1e293b; color: #fff; }
+    .tab-btn.active {
+      background: #2563eb;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    /* キャンバスラッパー（アスペクト比 16:9） */
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #050811;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #mainCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* HUDオーバーレイ */
+    .canvas-hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .hud-frame-chip {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #fbbf24;
+      font-family: monospace;
+      display: inline-block;
+    }
+    .hud-phase-chip {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #38bdf8;
+      display: inline-block;
+    }
+
+    /* コントロールバー */
+    .control-panel {
+      padding: 12px 16px;
+      background: #111827;
+      border-top: 1px solid #1f293d;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .scrubber-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .timeline-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    .timeline-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fbbf24;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+    }
+    .time-readout {
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: bold;
+      color: #fbbf24;
+      min-width: 90px;
+      text-align: right;
+    }
+
+    .playback-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .play-btns {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-ctrl {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .btn-ctrl:hover { background: #334155; }
+    .btn-play {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+    .btn-play:hover { background: #1d4ed8; }
+
+    .speed-btns {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .speed-btn {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .speed-btn.active {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+
+    /* サイドバー（テレメトリー・キーフレーム） */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .panel-card {
+      background: #111827;
+      border: 1px solid #1f293d;
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .panel-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #38bdf8;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 6px;
+    }
+
+    /* テレメトリー値リスト */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .tele-item {
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      padding: 8px;
+      border-radius: 6px;
+    }
+    .tele-label {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .tele-val {
+      font-size: 15px;
+      font-weight: bold;
+      color: #fbbf24;
+      font-family: monospace;
+      margin-top: 2px;
+    }
+
+    /* キーフレームクイックジャンプ */
+    .keyframe-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .kf-item {
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s;
+    }
+    .kf-item:hover {
+      background: #1e293b;
+      border-color: #38bdf8;
+    }
+    .kf-item.active {
+      background: #1e3a8a;
+      border-color: #60a5fa;
+      color: #fff;
+    }
+    .kf-tag {
+      font-weight: 800;
+      font-family: monospace;
+      color: #fbbf24;
+    }
+    .kf-desc {
+      color: #94a3b8;
+      font-size: 11px;
+    }
+    .kf-item.active .kf-desc { color: #e2e8f0; }
+
+    /* オプションチェックボックス */
+    .options-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .opt-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #cbd5e1;
+    }
+    .opt-label input { cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-area">
+      <h1>
+        ⚾ KokoSim 5 打撃アニメーションスタジオ (全96フレーム完全版)
+        <span class="badge-v6">pose_data_v6.json 準拠</span>
+      </h1>
+      <div class="subtitle">
+        ChatGPT作成の96コマ連続バイオメカニクス骨格データ ＆ approved_40F_style_reference.png のセルアニメ作画を統合
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn-ctrl" id="btnExportWebm">🎬 60fps動画(WebM)保存</button>
+      <button class="btn-ctrl" id="btnExportPng">📷 高解像度PNG保存</button>
+    </div>
+  </header>
+
+  <div class="studio-container">
+    <!-- メインビューポート -->
+    <div class="viewport-card">
+      <div class="viewport-header">
+        <div class="view-modes">
+          <button class="tab-btn active" data-mode="handover">📐 ChatGPT絵コンテ (96コマ全編・直接再生)</button>
+          <button class="tab-btn" data-mode="front3d">⚾ 投手正面 3D骨格視点 (ChatGPTボーン準拠)</button>
+          <button class="tab-btn" data-mode="front_master">⚾ TV中継正面 原画シート (写真3坂本選手準拠)</button>
+          <button class="tab-btn" data-mode="side_master">📐 三塁側真横 原画シート (ChatGPT絵コンテ準拠)</button>
+          <button class="tab-btn" data-mode="split">⚖️ 2画面連動比較 (絵コンテ vs 3D骨格)</button>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8;">
+          解像度: 1600×900 (16:9 原寸投影)
+        </div>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="mainCanvas" width="1600" height="900"></canvas>
+        <div class="canvas-hud">
+          <div class="hud-frame-chip" id="hudFrame">01 / 96 (t=0.000s)</div>
+          <div class="hud-phase-chip" id="hudPhase">準備・右足への荷重（両足接地）</div>
+        </div>
+      </div>
+
+      <!-- コントロールバー -->
+      <div class="control-panel">
+        <div class="scrubber-row">
+          <input type="range" id="timelineSlider" class="timeline-slider" min="1" max="96" value="1" step="1">
+          <div class="time-readout" id="timeReadout">01 / 96</div>
+        </div>
+
+        <div class="playback-row">
+          <div class="play-btns">
+            <button class="btn-ctrl" id="btnPrevFrame" title="前のコマ (←キー)">◀ 1コマ戻る</button>
+            <button class="btn-ctrl btn-play" id="btnPlayPause" title="再生 / 停止 (Spaceキー)">▶ 再生</button>
+            <button class="btn-ctrl" id="btnNextFrame" title="次のコマ (→キー)">1コマ進む ▶</button>
+            <button class="btn-ctrl" id="btnLoop" style="margin-left: 8px;">🔁 ループ中</button>
+          </div>
+
+          <div class="speed-btns">
+            <span>再生速度:</span>
+            <button class="speed-btn" data-speed="0.25">0.25x (スロー)</button>
+            <button class="speed-btn" data-speed="0.5">0.5x</button>
+            <button class="speed-btn active" data-speed="1.0">1.0x (60fps実時間)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- サイドバー -->
+    <div class="sidebar">
+      <!-- テレメトリー -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>📊 バイオメカニクス測定値</span>
+          <span style="font-size: 11px; color: #fbbf24;">F83 インパクト</span>
+        </div>
+        <div class="telemetry-grid">
+          <div class="tele-item">
+            <div class="tele-label">腰の開き (Pelvis)</div>
+            <div class="tele-val" id="telePelvis">-6.0°</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">胸の開き (Chest)</div>
+            <div class="tele-val" id="teleChest">-8.0°</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">体幹捻転差 (X-Factor)</div>
+            <div class="tele-val" id="teleSeparation">-2.0°</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">前足（左足）浮上高</div>
+            <div class="tele-val" id="teleLift">0.0 cm</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">バット実長 (3D)</div>
+            <div class="tele-val">85.0 cm</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">接地状態</div>
+            <div class="tele-val" id="teleContact" style="font-size: 12px; color: #38bdf8;">両足全面接地</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- クイックジャンプ（重要キーフレーム） -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>🎯 重要確認キーフレーム</span>
+        </div>
+        <div class="keyframe-list">
+          <div class="kf-item active" data-frame="1">
+            <span class="kf-tag">F01 (0.00s)</span>
+            <span class="kf-desc">セット構え・両足接地</span>
+          </div>
+          <div class="kf-item" data-frame="11">
+            <span class="kf-tag">F11 (0.17s)</span>
+            <span class="kf-desc">右足へタメ・軸足荷重</span>
+          </div>
+          <div class="kf-item" data-frame="30">
+            <span class="kf-tag">F30 (0.48s)</span>
+            <span class="kf-desc">左足を低く浮かす (2.0cm)</span>
+          </div>
+          <div class="kf-item" data-frame="40">
+            <span class="kf-tag">F40 (0.65s)</span>
+            <span class="kf-desc">★トップ形成 (参考画風合致)</span>
+          </div>
+          <div class="kf-item" data-frame="50">
+            <span class="kf-tag">F50 (0.82s)</span>
+            <span class="kf-desc">踏み出し・地面すれすれ</span>
+          </div>
+          <div class="kf-item" data-frame="68">
+            <span class="kf-tag">F68 (1.12s)</span>
+            <span class="kf-desc">左足つま先接地 (踵0.5cm)</span>
+          </div>
+          <div class="kf-item" data-frame="69">
+            <span class="kf-tag">F69 (1.13s)</span>
+            <span class="kf-desc">左足全面接地 (完全固定)</span>
+          </div>
+          <div class="kf-item" data-frame="73">
+            <span class="kf-tag">F73 (1.20s)</span>
+            <span class="kf-desc">腰先行回転・胸肩レイト</span>
+          </div>
+          <div class="kf-item" data-frame="82">
+            <span class="kf-tag">F82 (1.35s)</span>
+            <span class="kf-desc">バット急加速・インパクト直前</span>
+          </div>
+          <div class="kf-item" data-frame="83">
+            <span class="kf-tag">F83 (1.37s)</span>
+            <span class="kf-desc">💥 インパクト (ボール衝突)</span>
+          </div>
+          <div class="kf-item" data-frame="90">
+            <span class="kf-tag">F90 (1.48s)</span>
+            <span class="kf-desc">フォロースルー・腕伸展</span>
+          </div>
+          <div class="kf-item" data-frame="96">
+            <span class="kf-tag">F96 (1.58s)</span>
+            <span class="kf-desc">ハイフィニッシュ収束</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 表示オプション -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>⚙️ 描画エフェクト</span>
+        </div>
+        <div class="options-group">
+          <label class="opt-label">
+            <input type="checkbox" id="chkSwingBlur" checked>
+            <span>バット軌道スイング残像エフェクト</span>
+          </label>
+          <label class="opt-label">
+            <input type="checkbox" id="chkImpactEffect" checked>
+            <span>インパクト衝撃波 ＆ 放球演出 (F83)</span>
+          </label>
+          <label class="opt-label">
+            <input type="checkbox" id="chkChalkBox" checked>
+            <span>バッターボックス白線 ＆ スタジアム背景</span>
+          </label>
+          <label class="opt-label">
+            <input type="checkbox" id="chkPinstripes" checked>
+            <span>ユニフォーム縦ストライプ（ピンストライプ）</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // 96フレーム打撃アニメーションスタジオ コアロジック
+    // ============================================================================
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let poseData = null;
+    let handoverImages = [];
+    let animeSprites = {};
+    let styleRefImage = null;
+    let sideMasterImage = null;
+    let frontMasterImage = null;
+    let currentFrameIdx = 0; // 0-based: 0 to 95 (Frame 1 to 96)
+    let isPlaying = true;
+    let playbackSpeed = 1.0;
+    let isLooping = true;
+    let currentMode = 'handover'; // デフォルトでChatGPT絵コンテと本格セルアニメの2画面連動比較を表示
+    let lastAnimTime = 0;
+    let accumulatedTime = 0;
+
+    // UI要素参照
+    const hudFrame = document.getElementById('hudFrame');
+    const hudPhase = document.getElementById('hudPhase');
+    const timelineSlider = document.getElementById('timelineSlider');
+    const timeReadout = document.getElementById('timeReadout');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const telePelvis = document.getElementById('telePelvis');
+    const teleChest = document.getElementById('teleChest');
+    const teleSeparation = document.getElementById('teleSeparation');
+    const teleLift = document.getElementById('teleLift');
+    const teleContact = document.getElementById('teleContact');
+
+    const chkSwingBlur = document.getElementById('chkSwingBlur');
+    const chkImpactEffect = document.getElementById('chkImpactEffect');
+    const chkChalkBox = document.getElementById('chkChalkBox');
+    const chkPinstripes = document.getElementById('chkPinstripes');
+
+    // 1. データ＆画像ロード
+    async function init() {
+      try {
+        const resp = await fetch('/batting/pose_data_v6.json');
+        poseData = await resp.json();
+        console.log('Loaded pose_data_v6.json:', poseData.frames.length, 'frames');
+
+        // 参考画像ロード
+        styleRefImage = new Image();
+        styleRefImage.src = '/batting/approved_40F_style_reference.png';
+
+        sideMasterImage = new Image();
+        sideMasterImage.src = '/batting/batting_anime_master_sheet.jpg';
+
+        frontMasterImage = new Image();
+        frontMasterImage.src = '/batting/batting_anime_front_master.jpg';
+
+        // 11キーフレーム本格セルアニメ原画スプライト読み込み
+        const spriteNames = [
+          'kf_01_stance', 'kf_02_preload', 'kf_03_deepload', 'kf_04_leglift',
+          'kf_05_stride', 'kf_06_landing', 'kf_07_powertop', 'kf_08_batlag',
+          'kf_09_impact', 'kf_10_extension', 'kf_11_finish'
+        ];
+        for (const name of spriteNames) {
+          const img = new Image();
+          img.src = `/batting/anime_sprites/${name}.png?t=v2_facing_pitcher`;
+          animeSprites[name] = img;
+        }
+
+        // 絵コンテPNG事前読み込み（オンデマンドキャッシュ）
+        for (let i = 1; i <= 96; i++) {
+          const numStr = String(i).padStart(3, '0');
+          const img = new Image();
+          img.src = `/batting/storyboard_frames_png/frame_${numStr}.png`;
+          handoverImages.push(img);
+        }
+
+        // アニメーションループ開始
+        requestAnimationFrame(renderLoop);
+      } catch (err) {
+        console.error('Failed to load batting assets:', err);
+      }
+    }
+
+    // 2. メイン再生ループ (60fpsタイマー同期)
+    function renderLoop(timestamp) {
+      if (!lastAnimTime) lastAnimTime = timestamp;
+      const dt = (timestamp - lastAnimTime) / 1000;
+      lastAnimTime = timestamp;
+
+      if (isPlaying && poseData) {
+        accumulatedTime += dt * playbackSpeed;
+        const frameDuration = 1 / 60; // 60fps = 0.01666s
+        while (accumulatedTime >= frameDuration) {
+          accumulatedTime -= frameDuration;
+          currentFrameIdx++;
+          if (currentFrameIdx >= 96) {
+            if (isLooping) {
+              currentFrameIdx = 0;
+            } else {
+              currentFrameIdx = 95;
+              isPlaying = false;
+              updatePlayBtn();
+              break;
+            }
+          }
+        }
+        updateUI();
+      }
+
+      drawFrame();
+      requestAnimationFrame(renderLoop);
+    }
+
+    function updatePlayBtn() {
+      btnPlayPause.textContent = isPlaying ? '⏸ 一時停止' : '▶ 再生';
+      btnPlayPause.classList.toggle('btn-play', !isPlaying);
+    }
+
+    function updateUI() {
+      const fNum = currentFrameIdx + 1;
+      timelineSlider.value = fNum;
+      timeReadout.textContent = `${String(fNum).padStart(2, '0')} / 96`;
+      const timeSec = (currentFrameIdx / 60).toFixed(3);
+      hudFrame.textContent = `${String(fNum).padStart(2, '0')} / 96 (t=${timeSec}s)`;
+
+      if (poseData && poseData.frames[currentFrameIdx]) {
+        const frame = poseData.frames[currentFrameIdx];
+        hudPhase.textContent = frame.phase;
+        telePelvis.textContent = `${frame.rotations_deg.pelvis_open.toFixed(1)}°`;
+        teleChest.textContent = `${frame.rotations_deg.chest_open.toFixed(1)}°`;
+        teleSeparation.textContent = `${frame.rotations_deg.thorax_pelvis_separation.toFixed(1)}°`;
+        teleLift.textContent = `${frame.contact.left_foot_lift_cm.toFixed(1)} cm`;
+        teleContact.textContent = frame.contact.description || '両足全面接地';
+      }
+
+      // キーフレームリストのアクティブ表示
+      document.querySelectorAll('.kf-item').forEach(el => {
+        const kfNum = parseInt(el.dataset.frame, 10);
+        el.classList.toggle('active', kfNum === fNum);
+      });
+    }
+
+    // ============================================================================
+    // 3. レンダリングエンジン（描画ディスパッチ）
+    // ============================================================================
+    function drawFrame() {
+      if (!poseData) return;
+      const frame = poseData.frames[currentFrameIdx];
+      if (!frame) return;
+
+      ctx.clearRect(0, 0, 1600, 900);
+
+      if (currentMode === 'handover') {
+        // 引き継ぎ絵コンテPNG単体表示
+        drawHandoverFrame(0, 0, 1600, 900);
+      } else if (currentMode === 'split') {
+        // 2画面分割比較 (左: 絵コンテ, 右: セルアニメ)
+        // 1. 左画面 (ChatGPT絵コンテ素材)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, 800, 900);
+        ctx.clip();
+        drawHandoverFrame(-400, 0, 1600, 900);
+        ctx.restore();
+
+        // 境界線
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(798, 0, 4, 900);
+
+        // 2. 右画面 (投手正面 3D骨格リアルタイム投影)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(800, 0, 800, 900);
+        ctx.clip();
+        drawFront3DView(frame);
+        ctx.restore();
+
+        // ラベル
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(16, 20, 240, 32);
+        ctx.fillRect(816, 20, 280, 32);
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText('📐 ChatGPT絵コンテ素材', 28, 42);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('✨ KokoSim 5 本格セルアニメ作画', 828, 42);
+      } else if (currentMode === 'front_master') {
+        if (frontMasterImage && frontMasterImage.complete && frontMasterImage.naturalWidth > 0) {
+          ctx.drawImage(frontMasterImage, 0, 0, 1600, 900);
+        } else {
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(0, 0, 1600, 900);
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillText('正面マスター原画シートを読み込み中...', 600, 450);
+        }
+      } else if (currentMode === 'side_master') {
+        if (sideMasterImage && sideMasterImage.complete && sideMasterImage.naturalWidth > 0) {
+          ctx.drawImage(sideMasterImage, 0, 0, 1600, 900);
+        } else {
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(0, 0, 1600, 900);
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillText('真横マスター原画シートを読み込み中...', 600, 450);
+        }
+      } else if (currentMode === 'front3d') {
+        // 投手正面TV中継視点（3D座標から正面投影）
+        drawFront3DView(frame);
+      } else if (currentMode === 'vector') {
+        // ベクター簡易幾何モデル
+        drawProceduralVectorFrame(frame, false);
+      } else {
+        // 'anime' または 'anime_bone'
+        drawAnimeFrame(frame, currentMode === 'anime_bone');
+      }
+    }
+
+    function drawHandoverFrame(x, y, w, h) {
+      const img = handoverImages[currentFrameIdx];
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, x, y, w, h);
+      } else {
+        // ロード中プレースホルダ
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Loading Frame ${currentFrameIdx + 1}...`, x + w / 2, y + h / 2);
+      }
+    }
+
+    // ============================================================================
+    // 4. 高精度2D本格セルアニメ原画レンダラー (approved_40F_style_reference.png の画風完全準拠)
+    // ============================================================================
+    const kfOffsets = {
+      'kf_01_stance':    { dx: 0,   dy: 0 },
+      'kf_02_preload':   { dx: -10, dy: 0 },
+      'kf_03_deepload':  { dx: -15, dy: 0 },
+      'kf_04_leglift':   { dx: -5,  dy: 0 },
+      'kf_05_stride':    { dx: 15,  dy: 0 },
+      'kf_06_landing':   { dx: 30,  dy: 0 },
+      'kf_07_powertop':  { dx: 30,  dy: 0 },
+      'kf_08_batlag':    { dx: 35,  dy: 0 },
+      'kf_09_impact':    { dx: 40,  dy: 0 },
+      'kf_10_extension': { dx: 50,  dy: 0 },
+      'kf_11_finish':    { dx: 50,  dy: 0 }
+    };
+
+    function getKeyframeForFrame(fNum) {
+      if (fNum <= 10) return { name: 'kf_01_stance', desc: '構え・セット' };
+      if (fNum <= 20) return { name: 'kf_02_preload', desc: '右足へ荷重・予備タメ' };
+      if (fNum <= 32) return { name: 'kf_03_deepload', desc: '深部タメ・軸足固定' };
+      if (fNum <= 48) return { name: 'kf_04_leglift', desc: '前足浮上・タメ完成 (2.9cm)' };
+      if (fNum <= 62) return { name: 'kf_05_stride', desc: '前足踏み出し・地面すれすれ' };
+      if (fNum <= 69) return { name: 'kf_06_landing', desc: '前足着地・下半身固定' };
+      if (fNum <= 76) return { name: 'kf_07_powertop', desc: '骨盤先行回転・割れ形成' };
+      if (fNum <= 82) return { name: 'kf_08_batlag', desc: 'バット急加速・しなり' };
+      if (fNum <= 85) return { name: 'kf_09_impact', desc: 'インパクト一閃！衝突' };
+      if (fNum <= 90) return { name: 'kf_10_extension', desc: '両腕フル伸展・打球初速' };
+      return { name: 'kf_11_finish', desc: 'ハイフィニッシュ・減速収束' };
+    }
+
+    function drawAnimeFrame(frame, showBones = false) {
+      // 全96フレーム完全連続・ChatGPT pose_data_v6.json 骨格完全準拠の本格セルアニメ作画
+      drawProceduralVectorFrame(frame, showBones);
+    }
+
+    // ============================================================================
+    // 4-ベクター. 幾何ベクターモデル（簡易ポリゴン表示）
+    // ============================================================================
+    function drawProceduralVectorFrame(frame, showBones = false) {
+      const joints = frame.joints_screen_px;
+      const rot = frame.rotations_deg;
+      const fNum = frame.frame;
+
+      drawStadiumBackground();
+      if (chkSwingBlur.checked && fNum >= 75 && fNum <= 88) {
+        drawBatSwingBlur(fNum);
+      }
+
+      const chestRot = rot.chest_open;
+      const isBackFacing = chestRot > 75;
+
+      drawLegOrganic(joints.hip_R, joints.knee_R, joints.ankle_R, joints.toe_R, true, true);
+      drawLegOrganic(joints.hip_L, joints.knee_L, joints.ankle_L, joints.toe_L, false, false);
+
+      if (!isBackFacing) {
+        drawArmOrganic(joints.shoulder_R, joints.elbow_R, joints.wrist_R, true, true);
+      } else {
+        drawArmOrganic(joints.shoulder_L, joints.elbow_L, joints.wrist_L, false, true);
+      }
+
+      drawTorsoOrganic(joints, rot);
+
+      if (!isBackFacing) {
+        drawArmOrganic(joints.shoulder_L, joints.elbow_L, joints.wrist_L, false, false);
+      } else {
+        drawArmOrganic(joints.shoulder_R, joints.elbow_R, joints.wrist_R, true, false);
+      }
+
+      drawHeadAndHelmet(joints.head, joints.neck, rot, fNum);
+      drawGoldBat(joints.grip, joints.bat_tip, fNum);
+
+      if (chkImpactEffect.checked) {
+        drawPitchBallAndImpact(fNum, joints);
+      }
+
+      if (showBones) {
+        drawBoneWireframe(joints);
+      }
+    }
+
+    // ============================================================================
+    // 4-A. 背景描画（リアルな高校野球スタジアム風景・バッターボックス白線）
+    // ============================================================================
+    function drawStadiumBackground() {
+      // 1. 青空と入道雲
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, 420);
+      skyGrad.addColorStop(0, '#3b82f6');
+      skyGrad.addColorStop(0.5, '#60a5fa');
+      skyGrad.addColorStop(1, '#bfdbfe');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, 1600, 420);
+
+      // 遠景の夏雲（ソフトなモコモコ雲）
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.arc(320, 180, 110, 0, Math.PI * 2);
+      ctx.arc(420, 140, 130, 0, Math.PI * 2);
+      ctx.arc(540, 170, 100, 0, Math.PI * 2);
+      ctx.arc(1180, 200, 120, 0, Math.PI * 2);
+      ctx.arc(1290, 150, 140, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. バックスクリーン・外野スタンド後方の防風林（深緑の木々）
+      ctx.fillStyle = '#1e3a1e';
+      ctx.beginPath();
+      ctx.moveTo(0, 280);
+      for (let x = 0; x <= 1600; x += 40) {
+        const h = 260 + Math.sin(x * 0.02) * 22 + Math.cos(x * 0.05) * 14;
+        ctx.lineTo(x, h);
+      }
+      ctx.lineTo(1600, 360);
+      ctx.lineTo(0, 360);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3. 外野ダークグリーンのフェンス＆スタンド構造物
+      ctx.fillStyle = '#1e382b';
+      ctx.fillRect(0, 290, 1600, 240);
+
+      // スタンドの手すり・ラチ線
+      ctx.strokeStyle = '#2d5340';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(0, 320);
+      ctx.lineTo(1600, 320);
+      ctx.moveTo(0, 345);
+      ctx.lineTo(1600, 345);
+      ctx.stroke();
+
+      // 防球ネット支柱（垂直ポール）
+      ctx.strokeStyle = '#14271e';
+      ctx.lineWidth = 16;
+      for (let x = 80; x < 1600; x += 280) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 530);
+        ctx.stroke();
+      }
+
+      // 防球ネットのひし形ワイヤーメッシュ（微細テクスチャ）
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < 530; y += 18) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(1600, y);
+        ctx.stroke();
+      }
+      for (let x = 0; x < 1600; x += 18) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 530);
+        ctx.stroke();
+      }
+
+      // 4. 外野天然芝（鮮やかなライムグリーン〜エメラルド）
+      const grassGrad = ctx.createLinearGradient(0, 520, 0, 570);
+      grassGrad.addColorStop(0, '#4d7c0f');
+      grassGrad.addColorStop(0.3, '#65a30d');
+      grassGrad.addColorStop(1, '#84cc16');
+      ctx.fillStyle = grassGrad;
+      ctx.fillRect(0, 520, 1600, 50);
+
+      // 芝とアンツーカー土の境界（草のギザギザフリンジ）
+      ctx.fillStyle = '#84cc16';
+      ctx.beginPath();
+      ctx.moveTo(0, 568);
+      for (let x = 0; x <= 1600; x += 20) {
+        ctx.lineTo(x, 568 + (x % 40 === 0 ? 5 : 0));
+      }
+      ctx.lineTo(1600, 570);
+      ctx.lineTo(0, 570);
+      ctx.closePath();
+      ctx.fill();
+
+      // 5. 内野の黒土・赤土（アンツーカー・甲子園球場のような温かみのある土）
+      const dirtGrad = ctx.createLinearGradient(0, 570, 0, 900);
+      dirtGrad.addColorStop(0, '#a3633b');
+      dirtGrad.addColorStop(0.35, '#8c4e28');
+      dirtGrad.addColorStop(0.8, '#703a19');
+      dirtGrad.addColorStop(1, '#572b12');
+      ctx.fillStyle = dirtGrad;
+      ctx.fillRect(0, 570, 1600, 330);
+
+      // 土のリアルな凹凸・シャドウ
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+      for (let i = 0; i < 50; i++) {
+        const rx = (i * 139) % 1600;
+        const ry = 580 + (i * 47) % 310;
+        ctx.fillRect(rx, ry, 70, 3);
+      }
+
+      // 6. バッターボックス白線 (chkChalkBox)
+      if (chkChalkBox.checked) {
+        // 6. バッターボックス白線（三塁側真横視点: 投手は画面右、捕手は画面左）
+        ctx.save();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 11;
+        ctx.lineCap = 'square';
+        ctx.lineJoin = 'miter';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.strokeRect(570, 818, 500, 58);
+
+        // 石灰の散らばり（かすれ感）
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 18;
+        ctx.strokeRect(570, 818, 500, 58);
+
+        ctx.restore();
+      }
+    }
+
+    // ============================================================================
+    // 4-B. 脚部（立体的な野球パンツ・ネイビーソックス白2本ライン・黒スパイク）
+    // ============================================================================
+    function drawLegOrganic(hip, knee, ankle, toe, isRightLeg, isBackLayer) {
+      if (!hip || !knee || !ankle || !toe) return;
+
+      const pantsColor = isBackLayer ? '#e2e8f0' : '#ffffff';
+      const pantsShadow = isBackLayer ? '#94a3b8' : '#cbd5e1';
+      const navySocks = isBackLayer ? '#0f172a' : '#1e3a8a';
+      const cleatColor = '#171717';
+
+      // 1. 太もも (股関節 -> 膝) : ゆったりとしたユニフォームパンツの膨らみ
+      drawSmoothSegment(
+        { x: hip[0], y: hip[1] },
+        { x: knee[0], y: knee[1] },
+        52, 56, 42,
+        pantsColor, pantsShadow, '#111827', 0.12
+      );
+
+      // 2. すね・ふくらはぎ (膝 -> 足首) : パンツのたるみ裾 + ネイビーソックス
+      const midShinX = (knee[0] + ankle[0]) * 0.48;
+      const midShinY = (knee[1] + ankle[1]) * 0.48;
+
+      // パンツの膝下たるみ（ゴム口の膨らみ）
+      drawSmoothSegment(
+        { x: knee[0], y: knee[1] },
+        { x: midShinX, y: midShinY },
+        44, 40, 32,
+        pantsColor, pantsShadow, '#111827', 0.08
+      );
+
+      // すね下部（ネイビーハイソックス・引き締まったふくらはぎ）
+      drawSmoothSegment(
+        { x: midShinX, y: midShinY },
+        { x: ankle[0], y: ankle[1] },
+        30, 26, 21,
+        navySocks, '#0f172a', '#111827', 0.04
+      );
+
+      // ソックスの白2本ライン（Diamond no Ace / 伝統校デザイン・鮮明な2本帯）
+      ctx.save();
+      const dx = ankle[0] - midShinX;
+      const dy = ankle[1] - midShinY;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 5.0;
+      for (let offset of [0.26, 0.48]) {
+        const lx = midShinX + dx * offset;
+        const ly = midShinY + dy * offset;
+        ctx.beginPath();
+        ctx.moveTo(lx - nx * 18, ly - ny * 18);
+        ctx.lineTo(lx + nx * 18, ly + ny * 18);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 3. 黒スパイクシューズ（金属歯・白のウェーブマーク）
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(ankle[0] - 22, ankle[1] - 4);
+      ctx.lineTo(toe[0] + 30, toe[1] + 2);
+      ctx.lineTo(toe[0] + 24, toe[1] + 20);
+      ctx.lineTo(ankle[0] - 18, ankle[1] + 18);
+      ctx.closePath();
+      ctx.fillStyle = cleatColor;
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 4.0;
+      ctx.stroke();
+
+      // 白のシューズマーク（ミズノ風ランバード・アクセントライン）
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.6;
+      ctx.beginPath();
+      ctx.moveTo(ankle[0] - 4, ankle[1] + 6);
+      ctx.lineTo(ankle[0] + 16, ankle[1] + 13);
+      ctx.lineTo(toe[0] + 6, toe[1] + 9);
+      ctx.stroke();
+
+      // 金属スタッド（スパイク歯）
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(ankle[0] - 14, ankle[1] + 18, 7, 5);
+      ctx.fillRect(toe[0] + 10, toe[1] + 19, 7, 5);
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 4-C. 体幹（胸郭＋ユニフォーム＋ベルト＋ピンストライプ＋背番号）
+    // ============================================================================
+    function drawTorsoOrganic(joints, rot) {
+      const pel = joints.pelvis;
+      const ch = joints.chest;
+      const ab = joints.abdomen;
+      const sL = joints.shoulder_L;
+      const sR = joints.shoulder_R;
+      const n = joints.neck;
+
+      ctx.save();
+
+      // 1. 骨盤・ヒップ（パンツの腰回り）
+      ctx.beginPath();
+      ctx.ellipse(pel[0], pel[1], 62, 32, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 4.2;
+      ctx.stroke();
+
+      // 2. 黒革ベルト
+      ctx.beginPath();
+      ctx.ellipse(pel[0], pel[1] - 18, 58, 13, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fill();
+
+      // メタリックシルバーのバックル
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(pel[0] - 12, pel[1] - 25, 24, 15);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2.4;
+      ctx.strokeRect(pel[0] - 12, pel[1] - 25, 24, 15);
+
+      // 3. 胸部ユニフォーム（自然な僧帽筋の傾斜と脇のくびれ）
+      ctx.beginPath();
+      ctx.moveTo(sL[0], sL[1]);
+      // 僧帽筋（首から肩へなだらかに下りる）
+      ctx.quadraticCurveTo(n[0], n[1] + 18, sR[0], sR[1]);
+      // 右脇腹から腰へ
+      ctx.quadraticCurveTo(ch[0] - 48, ab[1], pel[0] - 56, pel[1] - 18);
+      // 腰の裾ライン
+      ctx.quadraticCurveTo(pel[0], pel[1] - 12, pel[0] + 56, pel[1] - 18);
+      // 左脇腹から左肩へ
+      ctx.quadraticCurveTo(ch[0] + 48, ab[1], sL[0], sL[1]);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // 2階調セル影（右側・脇下・陰影）
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.moveTo(sR[0], sR[1]);
+      ctx.quadraticCurveTo(ch[0], ch[1] + 20, pel[0] - 56, pel[1] - 18);
+      ctx.lineTo(sR[0] - 40, sR[1] + 40);
+      ctx.closePath();
+      ctx.fill();
+
+      // ピンストライプ（chkPinstripes）
+      if (chkPinstripes.checked) {
+        ctx.strokeStyle = 'rgba(30, 58, 138, 0.45)';
+        ctx.lineWidth = 2.4;
+        for (let ox = -42; ox <= 42; ox += 14) {
+          ctx.beginPath();
+          ctx.moveTo(ch[0] + ox, ch[1] - 45);
+          ctx.quadraticCurveTo(ab[0] + ox * 1.05, ab[1], pel[0] + ox * 1.15, pel[1] - 18);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 4.4;
+      ctx.stroke();
+
+      // 4. アンダーシャツの襟（Vネック / ネイビー）
+      ctx.beginPath();
+      ctx.moveTo(n[0] - 18, n[1] + 10);
+      ctx.lineTo(n[0], n[1] + 36);
+      ctx.lineTo(n[0] + 18, n[1] + 10);
+      ctx.closePath();
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fill();
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 3.6;
+      ctx.stroke();
+
+      // 5. 背番号 / 胸ロゴ
+      const chestRot = rot.chest_open;
+      if (chestRot > 85) {
+        // フォロースルーで背中が見える -> 背番号「4」
+        ctx.fillStyle = '#1e3a8a';
+        ctx.font = '900 42px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('4', ch[0], ch[1] + 18);
+      } else if (chestRot < 12) {
+        // 横向き・胸前面 -> 伝統校胸ロゴマーク
+        ctx.fillStyle = '#1e3a8a';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ASO', ch[0] + 6, ch[1] + 14);
+      }
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 4-D. 腕部（半袖ユニフォーム・長袖ネイビーアンダー・白打撃手袋・エルボーガード）
+    // ============================================================================
+    function drawArmOrganic(shoulder, elbow, wrist, isRightArm, isBackLayer) {
+      if (!shoulder || !elbow || !wrist) return;
+
+      const shirtColor = isBackLayer ? '#e2e8f0' : '#ffffff';
+      const shirtShadow = isBackLayer ? '#94a3b8' : '#cbd5e1';
+      const underColor = isBackLayer ? '#0f172a' : '#1e3a8a';
+      const underShadow = '#0a101d';
+
+      // 1. 上腕（半袖ユニフォーム・袖の立体的な広がり）
+      drawSmoothSegment(
+        { x: shoulder[0], y: shoulder[1] },
+        { x: elbow[0], y: elbow[1] },
+        30, 32, 26,
+        shirtColor, shirtShadow, '#111827', 0.1
+      );
+
+      // 2. 前腕（ネイビーのコンプレッションアンダーシャツ）
+      drawSmoothSegment(
+        { x: elbow[0], y: elbow[1] },
+        { x: wrist[0], y: wrist[1] },
+        25, 22, 18,
+        underColor, underShadow, '#111827', 0.07
+      );
+
+      // 3. 前足側（左腕）のエルボーガード（approved_40F_style_reference.png 準拠・白プロテクター）
+      if (!isRightArm) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(elbow[0], elbow[1], 21, 16, 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fill();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 3.8;
+        ctx.stroke();
+        // ベルクロ留め具
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(elbow[0] - 14, elbow[1] - 5, 28, 10);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(elbow[0] - 14, elbow[1] - 5, 28, 10);
+        ctx.restore();
+      }
+
+      // 4. バッティンググローブ手袋（白＋エンボス立体感）
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(wrist[0], wrist[1], 19, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 4.0;
+      ctx.stroke();
+
+      // 手首のネイビーリストバンド帯
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(wrist[0] - 12, wrist[1] - 5, 24, 8);
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 4-E. 頭部・ヘルメット・表情（approved_40F_style_reference.png 準拠）
+    // ============================================================================
+    function drawHeadAndHelmet(head, neck, rot, fNum) {
+      if (!head || !neck) return;
+
+      const hx = head[0];
+      const hy = head[1];
+      const nx = neck[0];
+      const ny = neck[1];
+
+      ctx.save();
+
+      // 1. 首筋（太く力強い高校球児の首）
+      ctx.fillStyle = '#f6c39a';
+      ctx.beginPath();
+      ctx.moveTo(nx - 18, ny + 12);
+      ctx.lineTo(hx - 12, hy + 38);
+      ctx.lineTo(hx + 18, hy + 38);
+      ctx.lineTo(nx + 18, ny + 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 4.0;
+      ctx.stroke();
+
+      // 首のセル陰影
+      ctx.fillStyle = '#df9b6d';
+      ctx.beginPath();
+      ctx.moveTo(nx - 16, ny + 12);
+      ctx.lineTo(hx - 10, hy + 38);
+      ctx.lineTo(hx + 2, hy + 38);
+      ctx.lineTo(nx + 2, ny + 12);
+      ctx.closePath();
+      ctx.fill();
+
+      // 2. 顔輪郭・顎ライン（アニメ調の凛々しい横顔・画面右の投手を見据える）
+      ctx.beginPath();
+      ctx.moveTo(hx - 18, hy + 18);
+      ctx.lineTo(hx + 14, hy + 50); // 顎先
+      ctx.lineTo(hx + 38, hy + 26); // 鼻・頬骨
+      ctx.lineTo(hx + 32, hy + 10);
+      ctx.closePath();
+      ctx.fillStyle = '#f8cfad';
+      ctx.fill();
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 3.8;
+      ctx.stroke();
+
+      // 顔のパーツ（目・瞳・眉・鼻筋・口）
+      if (rot.chest_open < 95) {
+        // 目（真剣なまなざし）
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.ellipse(hx + 24, hy + 22, 6, 4, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        // 瞳の白い光沢ハイライト
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(hx + 25, hy + 21, 2, 0, Math.PI * 2);
+        ctx.fill();
+        // 凛々しい濃い眉毛
+        ctx.strokeStyle = '#090e1c';
+        ctx.lineWidth = 3.6;
+        ctx.beginPath();
+        ctx.moveTo(hx + 14, hy + 14);
+        ctx.lineTo(hx + 32, hy + 16);
+        ctx.stroke();
+        // 鼻のシャープなライン
+        ctx.strokeStyle = '#df9b6d';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(hx + 34, hy + 18);
+        ctx.lineTo(hx + 38, hy + 26);
+        ctx.lineTo(hx + 30, hy + 28);
+        ctx.stroke();
+        // 結んだ口元
+        ctx.strokeStyle = '#991b1b';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(hx + 18, hy + 36);
+        ctx.lineTo(hx + 26, hy + 36);
+        ctx.stroke();
+      }
+
+      // 3. ネイビー硬式バッティングヘルメット (耳当て・ツバ・美しいラウンド光沢)
+      const helmetGrad = ctx.createRadialGradient(hx - 6, hy + 2, 12, hx, hy + 12, 60);
+      helmetGrad.addColorStop(0, '#2d4b85');
+      helmetGrad.addColorStop(0.55, '#172554');
+      helmetGrad.addColorStop(1, '#090e1c');
+
+      // ヘルメットドーム本体
+      ctx.beginPath();
+      ctx.arc(hx, hy + 12, 52, Math.PI * 0.85, Math.PI * 2.12);
+      ctx.lineTo(hx + 50, hy + 26);
+      ctx.lineTo(hx - 44, hy + 34);
+      ctx.closePath();
+      ctx.fillStyle = helmetGrad;
+      ctx.fill();
+      ctx.strokeStyle = '#020617';
+      ctx.lineWidth = 4.5;
+      ctx.stroke();
+
+      // ヘルメットのツバ（画面右投手側へ直線的に突き出す）
+      ctx.beginPath();
+      ctx.moveTo(hx + 28, hy + 16);
+      ctx.quadraticCurveTo(hx + 54, hy + 14, hx + 72, hy + 26);
+      ctx.quadraticCurveTo(hx + 50, hy + 32, hx + 24, hy + 28);
+      ctx.closePath();
+      ctx.fillStyle = '#172554';
+      ctx.fill();
+      ctx.strokeStyle = '#020617';
+      ctx.lineWidth = 3.8;
+      ctx.stroke();
+
+      // 耳当てフラップ（右打者の前耳＝左耳をガッシリとガード）
+      ctx.beginPath();
+      ctx.ellipse(hx + 8, hy + 38, 22, 26, 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#172554';
+      ctx.fill();
+      ctx.strokeStyle = '#020617';
+      ctx.lineWidth = 4.0;
+      ctx.stroke();
+
+      // 耳当て中央の聴音孔
+      ctx.fillStyle = '#090e1c';
+      ctx.beginPath();
+      ctx.arc(hx + 8, hy + 38, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ヘルメット上部の光沢ハイライト（艶やかなセルアニメ光彩）
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 5.0;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(hx - 6, hy + 4, 38, Math.PI * 1.15, Math.PI * 1.55);
+      ctx.stroke();
+
+      // チームマーク（白文字「A」）
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('A', hx + 20, hy + 8);
+
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 4-F. 金色金属バット（ゴールドグラデーション・金属光沢ハイライト）
+    // ============================================================================
+    function drawGoldBat(grip, tip, fNum) {
+      if (!grip || !tip) return;
+
+      const gx = grip[0];
+      const gy = grip[1];
+      const tx = tip[0];
+      const ty = tip[1];
+
+      const dx = tx - gx;
+      const dy = ty - gy;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      ctx.save();
+
+      // 1. グリップ部 (白のグリップテープ巻き)
+      const gripLen = len * 0.28;
+      const gripEndX = gx + (dx / len) * gripLen;
+      const gripEndY = gy + (dy / len) * gripLen;
+
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(gx - (dx / len) * 8, gy - (dy / len) * 8); // グリップエンド
+      ctx.lineTo(gripEndX, gripEndY);
+      ctx.stroke();
+
+      // グリップエンドノブ (金色)
+      ctx.fillStyle = '#eab308';
+      ctx.beginPath();
+      ctx.arc(gx - (dx / len) * 8, gy - (dy / len) * 8, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#713f12';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 2. 金属バレル部（テーパー〜先端・美しいゴールドグラデーション）
+      const batGrad = ctx.createLinearGradient(
+        gripEndX - nx * 14, gripEndY - ny * 14,
+        gripEndX + nx * 14, gripEndY + ny * 14
+      );
+      batGrad.addColorStop(0, '#fef08a'); // 反射ハイライト
+      batGrad.addColorStop(0.35, '#f59e0b'); // メインゴールド
+      batGrad.addColorStop(0.75, '#b45309'); // 影
+      batGrad.addColorStop(1, '#78350f');
+
+      // バレル輪郭 (テーパー拡大: 半径 8px -> 16px)
+      const r1 = 8;
+      const r2 = 17;
+
+      ctx.beginPath();
+      ctx.moveTo(gripEndX + nx * r1, gripEndY + ny * r1);
+      ctx.lineTo(tx + nx * r2, ty + ny * r2);
+      // 先端ヘッドキャップ
+      ctx.arc(tx, ty, r2, Math.atan2(ny, nx), Math.atan2(-ny, -nx));
+      ctx.lineTo(gripEndX - nx * r1, gripEndY - ny * r1);
+      ctx.closePath();
+      ctx.fillStyle = batGrad;
+      ctx.fill();
+
+      // 黒アウトライン
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 3.6;
+      ctx.stroke();
+
+      // バレルエッジの白色メタリック反射光
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.moveTo(gripEndX + nx * (r1 * 0.4), gripEndY + ny * (r1 * 0.4));
+      ctx.lineTo(tx + nx * (r2 * 0.4), ty + ny * (r2 * 0.4));
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 4-G. スイング残像軌跡＆ボール・インパクトエフェクト
+    // ============================================================================
+    function drawBatSwingBlur(fNum) {
+      if (!poseData) return;
+
+      // 過去3コマのバット先端・グリップ軌跡を取得してリボン描画
+      ctx.save();
+      const trailCount = 4;
+      const trailPoints = [];
+
+      for (let i = Math.max(1, fNum - trailCount); i <= fNum; i++) {
+        const frame = poseData.frames[i - 1];
+        if (frame && frame.joints_screen_px) {
+          trailPoints.push({
+            tip: frame.joints_screen_px.bat_tip,
+            grip: frame.joints_screen_px.grip
+          });
+        }
+      }
+
+      if (trailPoints.length >= 2) {
+        ctx.beginPath();
+        ctx.moveTo(trailPoints[0].tip[0], trailPoints[0].tip[1]);
+        for (let i = 1; i < trailPoints.length; i++) {
+          ctx.lineTo(trailPoints[i].tip[0], trailPoints[i].tip[1]);
+        }
+        for (let i = trailPoints.length - 1; i >= 0; i--) {
+          ctx.lineTo(trailPoints[i].grip[0], trailPoints[i].grip[1]);
+        }
+        ctx.closePath();
+
+        const grad = ctx.createLinearGradient(
+          trailPoints[0].tip[0], trailPoints[0].tip[1],
+          trailPoints[trailPoints.length - 1].tip[0], trailPoints[trailPoints.length - 1].tip[1]
+        );
+        grad.addColorStop(0, 'rgba(251, 191, 36, 0.0)');
+        grad.addColorStop(0.7, 'rgba(251, 191, 36, 0.25)');
+        grad.addColorStop(1, 'rgba(254, 240, 138, 0.65)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawPitchBallAndImpact(fNum, joints, overrideImpactX = null, overrideImpactY = null) {
+      const impactFrame = 83;
+      // インパクト地点: F83でのバット芯位置
+      const impactX = overrideImpactX !== null ? overrideImpactX : (joints.grip[0] + joints.bat_tip[0]) * 0.52;
+      const impactY = overrideImpactY !== null ? overrideImpactY : (joints.grip[1] + joints.bat_tip[1]) * 0.52;
+
+      ctx.save();
+
+      if (fNum < impactFrame) {
+        // 投球接近 (画面右からバットへ一直線に高速接近)
+        const remainFrames = impactFrame - fNum;
+        if (remainFrames <= 25) {
+          const ballX = impactX + remainFrames * 38;
+          const ballY = impactY - remainFrames * 3.5;
+
+          // ボール白球
+          drawBaseball(ballX, ballY, 14);
+
+          // 投球スピード線
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(ballX + 16, ballY);
+          ctx.lineTo(ballX + 70, ballY - 6);
+          ctx.stroke();
+        }
+      } else if (fNum === impactFrame) {
+        // ★★★ 83F インパクト瞬間 ★★★
+        drawBaseball(impactX, impactY, 15);
+
+        // 衝撃波リング
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(impactX, impactY, 32, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(impactX, impactY, 56, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 放射スパーク線
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 3.5;
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+          ctx.beginPath();
+          ctx.moveTo(impactX + Math.cos(a) * 20, impactY + Math.sin(a) * 20);
+          ctx.lineTo(impactX + Math.cos(a) * 75, impactY + Math.sin(a) * 75);
+          ctx.stroke();
+        }
+
+        // 打球音・インパクト文字演出
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#dc2626';
+        ctx.lineWidth = 4;
+        ctx.font = '900 32px sans-serif';
+        ctx.strokeText('CRACK!!', impactX - 60, impactY - 45);
+        ctx.fillText('CRACK!!', impactX - 60, impactY - 45);
+      } else {
+        // インパクト後: 打球の猛烈な飛び出し (画面左上・センター方向へ高速放球)
+        const elapsed = fNum - impactFrame;
+        if (elapsed <= 12) {
+          const ballX = impactX - elapsed * 58;
+          const ballY = impactY - elapsed * 28;
+
+          drawBaseball(ballX, ballY, 13);
+
+          // 打球軌跡レーザー
+          ctx.strokeStyle = 'rgba(254, 240, 138, 0.7)';
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(impactX, impactY);
+          ctx.lineTo(ballX, ballY);
+          ctx.stroke();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function drawBaseball(x, y, r) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      // 赤い縫い目（シーム）
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x - r * 0.45, y, r * 0.65, -Math.PI * 0.45, Math.PI * 0.45);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x + r * 0.45, y, r * 0.65, Math.PI * 0.55, Math.PI * 1.45);
+      ctx.stroke();
+    }
+
+    // ============================================================================
+    // 5. 幾何学四肢描画ヘルパー（膨らみ・筋肉・2階調陰影）
+    // ============================================================================
+    function drawSmoothSegment(p1, p2, r1, rMid, r2, fillMain, fillShadow, outlineColor, bulge) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      const mx = (p1.x + p2.x) * 0.5 + nx * len * bulge;
+      const my = (p1.y + p2.y) * 0.5 + ny * len * bulge;
+      const m2x = (p1.x + p2.x) * 0.5 - nx * len * (bulge * 0.4);
+      const m2y = (p1.y + p2.y) * 0.5 - ny * len * (bulge * 0.4);
+
+      const L1x = p1.x + nx * r1;
+      const L1y = p1.y + ny * r1;
+      const R1x = p1.x - nx * r1;
+      const R1y = p1.y - ny * r1;
+
+      const LMx = mx + nx * rMid;
+      const LMy = my + ny * rMid;
+      const RMx = m2x - nx * rMid;
+      const RMy = m2y - ny * rMid;
+
+      const L2x = p2.x + nx * r2;
+      const L2y = p2.y + ny * r2;
+      const R2x = p2.x - nx * r2;
+      const R2y = p2.y - ny * r2;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(L1x, L1y);
+      ctx.quadraticCurveTo(LMx, LMy, L2x, L2y);
+      ctx.quadraticCurveTo(p2.x + (dx / len) * (r2 * 0.5), p2.y + (dy / len) * (r2 * 0.5), R2x, R2y);
+      ctx.quadraticCurveTo(RMx, RMy, R1x, R1y);
+      ctx.quadraticCurveTo(p1.x - (dx / len) * (r1 * 0.5), p1.y - (dy / len) * (r1 * 0.5), L1x, L1y);
+      ctx.closePath();
+
+      ctx.fillStyle = fillMain;
+      ctx.fill();
+
+      // セル陰影
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = fillShadow;
+      ctx.beginPath();
+      ctx.moveTo(p1.x - nx * (r1 * 0.2), p1.y - ny * (r1 * 0.2));
+      ctx.quadraticCurveTo(m2x - nx * (rMid * 0.2), m2y - ny * (rMid * 0.2), p2.x - nx * (r2 * 0.2), p2.y - ny * (r2 * 0.2));
+      ctx.lineTo(R2x - nx * 8, R2y - ny * 8);
+      ctx.lineTo(R1x - nx * 8, R1y - ny * 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // アウトライン
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 4.0;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 6. ボーンワイヤーフレーム描画 (JSONとの完全一致検証用)
+    // ============================================================================
+    function drawBoneWireframe(joints) {
+      ctx.save();
+
+      // ボーン接続線
+      const bones = [
+        ['head', 'neck'],
+        ['neck', 'chest'],
+        ['chest', 'abdomen'],
+        ['abdomen', 'pelvis'],
+        // 腕
+        ['neck', 'shoulder_L'],
+        ['shoulder_L', 'elbow_L'],
+        ['elbow_L', 'wrist_L'],
+        ['neck', 'shoulder_R'],
+        ['shoulder_R', 'elbow_R'],
+        ['elbow_R', 'wrist_R'],
+        // 脚
+        ['pelvis', 'hip_L'],
+        ['hip_L', 'knee_L'],
+        ['knee_L', 'ankle_L'],
+        ['ankle_L', 'toe_L'],
+        ['pelvis', 'hip_R'],
+        ['hip_R', 'knee_R'],
+        ['knee_R', 'ankle_R'],
+        ['ankle_R', 'toe_R'],
+        // バット
+        ['wrist_L', 'grip'],
+        ['wrist_R', 'grip'],
+        ['grip', 'bat_tip'],
+      ];
+
+      ctx.lineWidth = 4;
+      for (const [j1, j2] of bones) {
+        const p1 = joints[j1];
+        const p2 = joints[j2];
+        if (!p1 || !p2) continue;
+
+        const isLeft = j1.endsWith('_L') || j2.endsWith('_L');
+        const isBat = j1.includes('bat') || j2.includes('bat') || j1.includes('grip');
+        ctx.strokeStyle = isBat ? '#eab308' : (isLeft ? '#38bdf8' : '#ef4444');
+
+        ctx.beginPath();
+        ctx.moveTo(p1[0], p1[1]);
+        ctx.lineTo(p2[0], p2[1]);
+        ctx.stroke();
+      }
+
+      // 関節ジョイント点
+      for (const [name, pt] of Object.entries(joints)) {
+        const isLeft = name.endsWith('_L');
+        ctx.fillStyle = isLeft ? '#38bdf8' : '#ef4444';
+        ctx.beginPath();
+        ctx.arc(pt[0], pt[1], 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 7. 投手正面 3D視点レンダラー (joints_world_m からリアルタイム投影)
+    // ============================================================================
+    function drawFront3DView(frame) {
+      const world = frame.joints_world_m;
+      if (!world) return;
+
+      // 1. 背景描画 (スタジアム・外野フェンス・内野土)
+      drawStadiumBackground();
+
+      // 2. 正面視点の本塁・打席の描画
+      ctx.save();
+      // ホームベース (五角形)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(800, 810);
+      ctx.lineTo(825, 825);
+      ctx.lineTo(825, 840);
+      ctx.lineTo(775, 840);
+      ctx.lineTo(775, 825);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 右打席の白線枠 (投手視点でホームベースの左側)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(620, 770, 140, 80);
+
+      // 左打席の白線枠
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(840, 770, 140, 80);
+      ctx.restore();
+
+      // 3. 3D骨格 (ChatGPT pose_data_v6.json joints_world_m) の正面透視投影
+      // 座標系: X=投手(+X)〜捕手(-X), Y=高さ(+Y), Z=手前/三塁側(+Z)〜奥/一塁側(-Z)
+      // TV中継センターカメラ: 投手側(X=+4.5m)から本塁(0,0,0)を見る。
+      // 右打者の立体感（前足・後ろ足・両腕・胸の捻転）が明瞭に見えるよう約16度のアングルで投影
+      function projectFront(vec) {
+        const [wx, wy, wz] = vec;
+        // TV中継センターカメラ視点（マウンド後方・やや一塁寄りのTV中継定番アングル: 約36度）
+        // 打者の構え（横向き・左肩越しに投手を睨む）からトップのタメ、インパクトでの骨盤・胸の回転、フォロースルーの背中への巻き付きが最も自然かつ正確に見える画角
+        const camAngleDeg = 36.0;
+        const rad = (camAngleDeg * Math.PI) / 180;
+        const rotX = wx * Math.cos(rad) - wz * Math.sin(rad);
+        const rotZ = wx * Math.sin(rad) + wz * Math.cos(rad);
+
+        const camDist = 4.0;
+        const depth = camDist - rotX;
+        const scale = 370 * (camDist / Math.max(1.0, depth));
+
+        const sx = 800 - rotZ * scale;
+        const sy = 820 - wy * scale;
+        return [sx, sy, depth];
+      }
+
+      const proj = {};
+      for (const [k, v] of Object.entries(world)) {
+        proj[k] = projectFront(v);
+      }
+
+      ctx.save();
+
+      // 4. ボーン描画（ChatGPTのカラーリング準拠: 黄色=前側/左側, 青色=後側/右側）
+      const boneSegments = [
+        // 体幹・頭部
+        { from: 'head', to: 'neck', color: '#f8fafc', width: 14 },
+        { from: 'neck', to: 'chest', color: '#f8fafc', width: 18 },
+        { from: 'chest', to: 'abdomen', color: '#f8fafc', width: 16 },
+        { from: 'abdomen', to: 'pelvis', color: '#f8fafc', width: 16 },
+        { from: 'chest', to: 'shoulder_L', color: '#fbbf24', width: 12 },
+        { from: 'chest', to: 'shoulder_R', color: '#38bdf8', width: 12 },
+        { from: 'pelvis', to: 'hip_L', color: '#fbbf24', width: 14 },
+        { from: 'pelvis', to: 'hip_R', color: '#38bdf8', width: 14 },
+        // 軸足・右脚（後側・青）
+        { from: 'hip_R', to: 'knee_R', color: '#1d4ed8', width: 16 },
+        { from: 'knee_R', to: 'ankle_R', color: '#1e40af', width: 14 },
+        { from: 'ankle_R', to: 'toe_R', color: '#0f172a', width: 12 },
+        // 踏み出し足・左脚（前側・黄）
+        { from: 'hip_L', to: 'knee_L', color: '#eab308', width: 16 },
+        { from: 'knee_L', to: 'ankle_L', color: '#ca8a04', width: 14 },
+        { from: 'ankle_L', to: 'toe_L', color: '#0f172a', width: 12 },
+        // 右腕（後側・青）
+        { from: 'shoulder_R', to: 'elbow_R', color: '#2563eb', width: 12 },
+        { from: 'elbow_R', to: 'wrist_R', color: '#3b82f6', width: 10 },
+        // 左腕（前側・黄）
+        { from: 'shoulder_L', to: 'elbow_L', color: '#f59e0b', width: 12 },
+        { from: 'elbow_L', to: 'wrist_L', color: '#fbbf24', width: 10 }
+      ];
+
+      // 骨格ライン描画
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const seg of boneSegments) {
+        if (proj[seg.from] && proj[seg.to]) {
+          ctx.strokeStyle = seg.color;
+          ctx.lineWidth = seg.width;
+          ctx.beginPath();
+          ctx.moveTo(proj[seg.from][0], proj[seg.from][1]);
+          ctx.lineTo(proj[seg.to][0], proj[seg.to][1]);
+          ctx.stroke();
+
+          // 骨のアウトライン
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+          ctx.lineWidth = seg.width + 3;
+          ctx.stroke();
+          ctx.strokeStyle = seg.color;
+          ctx.lineWidth = seg.width;
+          ctx.stroke();
+        }
+      }
+
+      // 5. バットの描画（金色金属バット・存在感のある太さ）
+      if (proj.grip && proj.bat_tip) {
+        // グリップからヘッドへのグラデーション
+        const batGrad = ctx.createLinearGradient(proj.grip[0], proj.grip[1], proj.bat_tip[0], proj.bat_tip[1]);
+        batGrad.addColorStop(0, '#fef08a');
+        batGrad.addColorStop(0.5, '#eab308');
+        batGrad.addColorStop(1, '#ca8a04');
+
+        // バット芯
+        ctx.strokeStyle = batGrad;
+        ctx.lineWidth = 16;
+        ctx.beginPath();
+        ctx.moveTo(proj.grip[0], proj.grip[1]);
+        ctx.lineTo(proj.bat_tip[0], proj.bat_tip[1]);
+        ctx.stroke();
+
+        // バット外枠・ツヤ
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }
+
+      // 6. 頭部・ヘルメット
+      if (proj.head) {
+        ctx.fillStyle = '#1e3a8a'; // 濃紺ヘルメット
+        ctx.beginPath();
+        ctx.arc(proj.head[0], proj.head[1], 26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // つば（バイザー）
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.ellipse(proj.head[0] + 12, proj.head[1] + 6, 16, 6, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 7. 各関節マーカー（ChatGPT仕様: 黄色=前/左, 青=後/右, 白=センター）
+      for (const [k, p] of Object.entries(proj)) {
+        if (k === 'head') continue;
+        const isLeft = k.endsWith('_L');
+        const isRight = k.endsWith('_R');
+        ctx.fillStyle = isLeft ? '#fef08a' : (isRight ? '#60a5fa' : '#ffffff');
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // 8. 視点タイトル・HUD
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(20, 20, 480, 42);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('⚾ TV中継正面 3D骨格視点 (ChatGPT pose_data_v6.json 準拠)', 32, 48);
+
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // 8. イベントリスナー＆ユーザーインタラクション
+    // ============================================================================
+    // スクラバー操作
+    timelineSlider.addEventListener('input', (e) => {
+      currentFrameIdx = parseInt(e.target.value, 10) - 1;
+      updateUI();
+    });
+
+    // 再生 / 一時停止
+    btnPlayPause.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      updatePlayBtn();
+    });
+
+    // コマ送り
+    document.getElementById('btnPrevFrame').addEventListener('click', () => {
+      isPlaying = false;
+      updatePlayBtn();
+      currentFrameIdx = Math.max(0, currentFrameIdx - 1);
+      updateUI();
+    });
+
+    document.getElementById('btnNextFrame').addEventListener('click', () => {
+      isPlaying = false;
+      updatePlayBtn();
+      currentFrameIdx = Math.min(95, currentFrameIdx + 1);
+      updateUI();
+    });
+
+    // ループ切替
+    document.getElementById('btnLoop').addEventListener('click', (e) => {
+      isLooping = !isLooping;
+      e.target.textContent = isLooping ? '🔁 ループ中' : '➡️ 1回再生';
+      e.target.style.background = isLooping ? '#1e293b' : '#334155';
+    });
+
+    // 速度変更
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        playbackSpeed = parseFloat(btn.dataset.speed);
+      });
+    });
+
+    // 表示モード切替
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+      });
+    });
+
+    // キーフレームクイックジャンプ
+    document.querySelectorAll('.kf-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const f = parseInt(item.dataset.frame, 10);
+        currentFrameIdx = f - 1;
+        updateUI();
+      });
+    });
+
+    // キーボードショートカット
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        isPlaying = !isPlaying;
+        updatePlayBtn();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        isPlaying = false;
+        updatePlayBtn();
+        currentFrameIdx = Math.max(0, currentFrameIdx - 1);
+        updateUI();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        isPlaying = false;
+        updatePlayBtn();
+        currentFrameIdx = Math.min(95, currentFrameIdx + 1);
+        updateUI();
+      }
+    });
+
+    // WebM動画書き出し (全96フレームを60fpsで録画)
+    document.getElementById('btnExportWebm').addEventListener('click', async () => {
+      const btn = document.getElementById('btnExportWebm');
+      btn.textContent = '⏳ 録画中 (1〜96F)...';
+      btn.disabled = true;
+
+      isPlaying = false;
+      currentFrameIdx = 0;
+      updatePlayBtn();
+      updateUI();
+      drawFrame();
+
+      const stream = canvas.captureStream(60);
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+      const chunks = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'kokosim5_batting_96frames_60fps.webm';
+        a.click();
+        URL.revokeObjectURL(url);
+        btn.textContent = '🎬 60fps動画(WebM)保存';
+        btn.disabled = false;
+      };
+
+      recorder.start();
+
+      // 60fpsで96フレーム送り
+      for (let i = 0; i < 96; i++) {
+        currentFrameIdx = i;
+        updateUI();
+        drawFrame();
+        await new Promise(r => setTimeout(r, 1000 / 60));
+      }
+
+      recorder.stop();
+    });
+
+    // 開始
+    init();
+  </script>
+</body>
+</html>

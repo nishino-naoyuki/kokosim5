@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Keyframe Sprite Slicer & Preview</title>
+  <style>
+    body { font-family: sans-serif; background: #1e293b; color: #f8fafc; padding: 20px; }
+    h1 { color: #fbbf24; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; }
+    .card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; text-align: center; }
+    .checker {
+      background-image: linear-gradient(45deg, #2d3748 25%, transparent 25%),
+                        linear-gradient(-45deg, #2d3748 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #2d3748 75%),
+                        linear-gradient(-45deg, transparent 75%, #2d3748 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+      background-color: #1a202c;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 10px auto;
+    }
+    canvas { display: block; max-width: 100%; height: auto; }
+    .label { font-weight: bold; margin-bottom: 6px; color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>⚾ KokoSim 5 投手・打者 スプライト切り抜きプレビュー</h1>
+  <div id="status">画像読み込み中...</div>
+
+  <h2>投手（PITCHER）4コマ</h2>
+  <div class="grid" id="pitcher-grid"></div>
+
+  <h2>打者（BATTER）4コマ</h2>
+  <div class="grid" id="batter-grid"></div>
+
+  <script>
+    const img = new Image();
+    img.src = '/assets/match_character_keyframes.jpg';
+    img.onload = () => {
+      document.getElementById('status').innerText = `画像ロード完了: ${img.width}x${img.height}`;
+
+      // 4列のX範囲（1376px / 4 ≈ 344px）
+      // Y範囲: 投手 Y: 80~410 (H: 330), 打者 Y: 430~760 (H: 330)
+      const pCols = [
+        { name: '① セット構え', x: 20, y: 75, w: 310, h: 335 },
+        { name: '② 足上げ・タメ', x: 350, y: 75, w: 310, h: 335 },
+        { name: '③ 踏み込みリリース', x: 680, y: 75, w: 330, h: 335 },
+        { name: '④ 蹴り上げフォロースルー', x: 1020, y: 75, w: 330, h: 335 }
+      ];
+
+      const bCols = [
+        { name: '① 構え', x: 20, y: 420, w: 310, h: 335 },
+        { name: '② 始動ステップ', x: 350, y: 420, w: 310, h: 335 },
+        { name: '③ インパクト一閃', x: 680, y: 420, w: 330, h: 335 },
+        { name: '④ 振り抜き', x: 1020, y: 420, w: 330, h: 335 }
+      ];
+
+      function sliceAndRemoveBg(spec) {
+        const c = document.createElement('canvas');
+        c.width = spec.w;
+        c.height = spec.h;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, spec.x, spec.y, spec.w, spec.h, 0, 0, spec.w, spec.h);
+
+        const idata = ctx.getImageData(0, 0, spec.w, spec.h);
+        const d = idata.data;
+        // 背景透過処理 (スタジオ白・淡グレー背景の除去)
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i];
+          const g = d[i+1];
+          const b = d[i+2];
+          // 白系（R,G,B > 225 かつ彩度が低い）
+          const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(b - r));
+          if (r > 215 && g > 215 && b > 215 && maxDiff < 20) {
+            // スムーズなアルファフェード
+            const brightness = (r + g + b) / 3;
+            if (brightness > 238) {
+              d[i+3] = 0;
+            } else {
+              d[i+3] = Math.round((238 - brightness) / 23 * 255);
+            }
+          }
+        }
+        ctx.putImageData(idata, 0, 0);
+        return c;
+      }
+
+      const pGrid = document.getElementById('pitcher-grid');
+      pCols.forEach(spec => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<div class="label">${spec.name}</div><div class="checker"></div>`;
+        const canvas = sliceAndRemoveBg(spec);
+        card.querySelector('.checker').appendChild(canvas);
+        pGrid.appendChild(card);
+      });
+
+      const bGrid = document.getElementById('batter-grid');
+      bCols.forEach(spec => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<div class="label">${spec.name}</div><div class="checker"></div>`;
+        const canvas = sliceAndRemoveBg(spec);
+        card.querySelector('.checker').appendChild(canvas);
+        bGrid.appendChild(card);
+      });
+    };
+  </script>
+</body>
+</html>

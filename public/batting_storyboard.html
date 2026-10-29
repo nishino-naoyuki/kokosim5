@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>⚾ KokoSim 5 右打者バッティング連続27コマ 絵コンテ (投手後方視点)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 24px; color: #fbbf24; margin-bottom: 6px; }
+    .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+
+    /* 画角解説カード */
+    .section-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #38bdf8;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .diagram-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+    }
+    .diagram-svg {
+      background: #0f172a;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .diagram-text {
+      flex: 1;
+      min-width: 320px;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-right: 6px;
+    }
+    .badge-user { background: #ea580c; color: #fff; }
+    .badge-game { background: #0284c7; color: #fff; }
+
+    /* インタラクティブ比較プレイヤー */
+    .player-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+      margin-top: 14px;
+    }
+    .view-box {
+      flex: 1;
+      min-width: 280px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .view-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .canvas-preview {
+      display: inline-block;
+      background: #1e293b;
+      border-radius: 6px;
+      border: 2px solid #475569;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .scrubber {
+      flex: 1;
+      height: 8px;
+      cursor: pointer;
+    }
+    .btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn:hover { background: #1d4ed8; }
+
+    /* 27コマ一覧グリッド */
+    .grid-27 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .frame-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .frame-card:hover {
+      border-color: #38bdf8;
+      transform: translateY(-2px);
+    }
+    .frame-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .frame-tag {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .phase-stance { background: #1e3a8a; color: #93c5fd; }
+    .phase-stride { background: #14532d; color: #86efac; }
+    .phase-load { background: #713f12; color: #fde047; }
+    .phase-impact { background: #831843; color: #f472b6; }
+    .phase-finish { background: #4c1d95; color: #c4b5fd; }
+
+    .frame-body {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .frame-crop-canvas {
+      border-radius: 4px;
+      border: 1px solid #475569;
+      background: #1e293b;
+    }
+    .frame-desc {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .frame-desc strong {
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⚾ KokoSim 5 右打者バッティング連続27コマ 絵コンテ (Storyboard)</h1>
+  <div class="subtitle">
+    ユーザー様提供の写真（27コマ・横アングル）を、ゲーム本番視点「TV中継センターカメラ（投手後方からホームベースを見る画角）」へ完全変換した正式絵コンテ
+  </div>
+
+  <!-- 0. 本格絵コンテ原画 -->
+  <div class="section-card">
+    <div class="section-title">🎨 【絵コンテ原画】TV中継センターカメラ視点（投手後方からホームベース方向）</div>
+    <div style="text-align: center; margin-bottom: 8px;">
+      <img src="/assets/batting_storyboard_concept.jpg" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #334155;" alt="バッティング連続絵コンテ">
+    </div>
+    <div style="font-size: 13px; color: #94a3b8;">
+      ※キャッチャーと球審がホームベース奥に位置し、右打者は投手（画面手前）へ向けて左肩・左腕を前に出し、すり足で前進・インパクト・フィニッシュへと連動する正式な試合視点コンテです。
+    </div>
+  </div>
+
+  <!-- 1. 画角変換の解説図 -->
+  <div class="section-card">
+    <div class="section-title">📐 画角と視点の変換構造（横アングル ➜ 投手後方センター視点）</div>
+    <div class="diagram-container">
+      <svg class="diagram-svg" width="340" height="240" viewBox="0 0 340 240">
+        <!-- グラウンド背景 -->
+        <rect width="340" height="240" fill="#0f172a"/>
+        <!-- ファウルライン & 本塁 -->
+        <path d="M 170 60 L 60 170 L 170 230 L 280 170 Z" fill="#334155" opacity="0.4"/>
+        <path d="M 170 60 L 290 180" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4"/>
+        <path d="M 170 60 L 50 180" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4"/>
+        <!-- ホームベース -->
+        <polygon points="170,55 162,63 162,72 178,72 178,63" fill="#ffffff"/>
+        <!-- 右打席 & 左打席 -->
+        <rect x="135" y="52" width="22" height="34" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+        <rect x="183" y="52" width="22" height="34" fill="none" stroke="#64748b" stroke-width="1"/>
+        <!-- 右打者（打席内） -->
+        <ellipse cx="146" cy="68" rx="8" ry="5" fill="#38bdf8"/>
+        <!-- 視線と体の向き矢印 -->
+        <line x1="146" y1="68" x2="146" y2="180" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+        
+        <!-- カメラA：ユーザー様の連続写真（横アングル） -->
+        <circle cx="50" cy="68" r="8" fill="#ea580c"/>
+        <line x1="58" y1="68" x2="135" y2="68" stroke="#ea580c" stroke-width="2" stroke-dasharray="3"/>
+        <text x="12" y="54" fill="#fb923c" font-size="11" font-weight="bold">【元写真】3塁側</text>
+        <text x="12" y="68" fill="#ea580c" font-size="10">打者の正面（横）</text>
+
+        <!-- カメラB：ゲーム本番（センターカメラ） -->
+        <circle cx="170" cy="215" r="9" fill="#0284c7"/>
+        <line x1="170" y1="205" x2="170" y2="80" stroke="#0284c7" stroke-width="2.5"/>
+        <text x="185" y="215" fill="#38bdf8" font-size="12" font-weight="bold">【ゲーム本番視点】</text>
+        <text x="185" y="230" fill="#94a3b8" font-size="10">投手後方からホームを見る</text>
+
+        <!-- マウンド位置 -->
+        <circle cx="170" cy="140" r="14" fill="#475569" opacity="0.6"/>
+        <rect x="165" y="138" width="10" height="3" fill="#ffffff"/>
+        <text x="185" y="144" fill="#94a3b8" font-size="10">マウンド（投手）</text>
+      </svg>
+
+      <div class="diagram-text">
+        <p style="margin-bottom: 8px;">
+          <span class="badge badge-user">元写真の画角</span>
+          <strong>3塁側・打者の正面（横アングル）</strong><br>
+          打者の胸やベルトのバックル、スイングの左右の弧が真横から見えます。左足は右方向（投手方向）へ滑り出します。
+        </p>
+        <p style="margin-bottom: 8px;">
+          <span class="badge badge-game">ゲーム本番の画角</span>
+          <strong>TV中継センターカメラ（投手後方から本塁を見る画角）</strong><br>
+          投手・マウンドの後方からホームベース方向を真っ直ぐ見ます。この視点では：
+        </p>
+        <ul style="margin-left: 20px; color: #cbd5e1; font-size: 13px;">
+          <li>右打者の<strong>左肩・左腕・左脚が画面手前（投手側）</strong>に位置する。</li>
+          <li>打者は<strong>左肩越しに画面手前の投手を見据える</strong>（首を左に回す）。</li>
+          <li>左足のすり足ステップは、<strong>画面手前（投手方向の奥行き）</strong>に向かって低く滑り出す。</li>
+          <li>インパクト〜フォロースルーで、打者の体幹が回転し、<strong>背中（背番号）が捕手側へ回り、胸が三塁側（画面右奥）へ開いていく</strong>。</li>
+          <li>バットは左肩の上へ高く巻き上がり、美しいハイフィニッシュを描く。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. インタラクティブ比較プレイヤー -->
+  <div class="section-card">
+    <div class="section-title">🎬 27コマ連続フロー・フレーム比較プレイヤー</div>
+    <div class="player-container">
+      <!-- 左：元写真の該当コマ -->
+      <div class="view-box">
+        <div class="view-title"><span class="badge badge-user">元写真（横視点）</span> コマ <span id="cur-frame-num-1">01</span> / 27</div>
+        <canvas id="user-crop-canvas" class="canvas-preview" width="220" height="280"></canvas>
+      </div>
+
+      <!-- 右：本番センターカメラ視点での作画設計（ベクトル骨格プレビュー） -->
+      <div class="view-box">
+        <div class="view-title"><span class="badge badge-game">本番視点（投手後方センターカメラ）</span> コマ <span id="cur-frame-num-2">01</span> / 27</div>
+        <canvas id="game-view-canvas" class="canvas-preview" width="220" height="280"></canvas>
+      </div>
+
+      <!-- 詳細情報 -->
+      <div class="view-box" style="text-align: left; font-size: 13px;">
+        <div class="view-title" style="color: #fbbf24;">📋 現在コマの動作仕様（絵コンテ指示）</div>
+        <div style="margin-bottom: 8px;"><strong>フェーズ:</strong> <span id="cur-phase" style="color: #38bdf8;">構え (Stance)</span></div>
+        <div style="margin-bottom: 8px;"><strong>足の動き:</strong> <span id="cur-footwork">軸足にしっかり体重を乗せ、左足は地面に置く</span></div>
+        <div style="margin-bottom: 8px;"><strong>バット・腕:</strong> <span id="cur-bat">右耳の後ろにバットを立て、両手でしっかり保持</span></div>
+        <div style="margin-bottom: 8px;"><strong>体幹・視線:</strong> <span id="cur-torso">左肩を投手（画面手前）に向け、首越しに投手を直視</span></div>
+        <div style="color: #94a3b8; font-size: 11px; margin-top: 10px;">※再生ボタンを押すと、約0.9秒（30fps換算）のリアルタイムスイング速度で一連の流れをループ再生します。</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="play-btn">▶ 再生 / 停止</button>
+      <input type="range" class="scrubber" id="frame-scrubber" min="1" max="27" value="1">
+      <span style="font-weight: bold; width: 60px;" id="frame-indicator">01 / 27</span>
+    </div>
+  </div>
+
+  <!-- 3. 絵コンテ 全27コマ一覧表 -->
+  <div class="section-card">
+    <div class="section-title">📑 【絵コンテ】全27コマ 連続フロー詳細一覧（01〜27 完全連動）</div>
+    <div class="grid-27" id="storyboard-grid"></div>
+  </div>
+
+  <script>
+    // 27フレームの動作定義（元写真の解析結果 ＋ センターカメラ視点への変換仕様）
+    const FRAMES_DATA = [
+      // 行1：構え 〜 すり足ステップ 〜 接地
+      { id: 1, name: '構え (Stance)', phase: 'STANCE', tag: '構え', col: 'phase-stance',
+        desc: '左肩を投手（画面手前）に向けリラックスした構え。バットは右耳の後ろに立て、両手でしっかり保持。視線は手前の投手。',
+        foot: '両足均等に体重配置。膝を軽く曲げ低重心。', bat: '角度45°、右耳後ろで両手保持。', torso: '左肩が手前、胸は三塁側奥。' },
+      { id: 2, name: '構え維持・脱力', phase: 'STANCE', tag: '構え', col: 'phase-stance',
+        desc: 'わずかなリズム。グリップの位置を固定したまま呼吸を整える。',
+        foot: '両足均等。', bat: '右耳後ろで維持。', torso: 'リラックス。' },
+      { id: 3, name: '軸足タメ始動', phase: 'LOAD', tag: 'タメ', col: 'phase-load',
+        desc: '体重が軸足（後ろ脚・右股関節）へスッと乗る。骨盤のタメが始まる。',
+        foot: '右足股関節に体重70%。', bat: '手元は動かさずキープ。', torso: '軸足側に少し沈み込む。' },
+      { id: 4, name: '左踵浮かし (ヒールアップ)', phase: 'LOAD', tag: 'タメ', col: 'phase-load',
+        desc: '前足（左足）の踵がわずかに浮く。足首の脱力。膝は胸まで上げない！',
+        foot: '左踵が2cm浮く。右足で立つ。', bat: 'トップの準備。', torso: '骨盤の捻転準備。' },
+      { id: 5, name: 'すり足始動 (低重心ホバー)', phase: 'STRIDE', tag: 'すり足', col: 'phase-stride',
+        desc: '左足が地面からわずか5cm浮き、地面スレスレを前へ滑り出す。膝は高く上げない！',
+        foot: '左足が地面スレスレ5cmを前進。', bat: '手元は耳の後ろに残る。', torso: '頭の高さが変わらない。' },
+      { id: 6, name: 'すり足前進', phase: 'STRIDE', tag: 'すり足', col: 'phase-stride',
+        desc: '左足が投手方向（画面手前・奥行き方向）へ滑り続ける。頭の位置はブレない。',
+        foot: '足首高さで前進。', bat: 'トップ位置キープ。', torso: '胸は奥を向いたまま。' },
+      { id: 7, name: 'ステップ伸展', phase: 'STRIDE', tag: 'すり足', col: 'phase-stride',
+        desc: '左足が前へ大きく伸びる。着地に向けてつま先が下を向く。',
+        foot: 'ストライドが最大幅へ。', bat: 'バットヘッドは後ろに残る。', torso: '捻転差が蓄積。' },
+      { id: 8, name: '接地直前態勢', phase: 'STRIDE', tag: 'すり足', col: 'phase-stride',
+        desc: '左足つま先がバッターボックスの土に迫る。体幹はまだ開かない。',
+        foot: 'つま先が土の直前。', bat: '手元は耳の後ろ。', torso: '左肩が手前で壁を作る。' },
+      { id: 9, name: 'つま先接地 (タッチ)', phase: 'STRIDE', tag: '接地', col: 'phase-stride',
+        desc: '左つま先が静かに接地。ここから強力な回転運動へ移行する境界。',
+        foot: 'つま先接地。重心はまだ後ろ。', bat: 'グリップ先行の準備。', torso: '肩の開きを我慢。' },
+
+      // 行2：着地 〜 トップ 〜 加速 〜 インパクト
+      { id: 10, name: '着地完了 (パワートップ)', phase: 'TOP', tag: 'トップ', col: 'phase-load',
+        desc: '左足踵がドッシリ着地。グリップは耳の後ろに残る「トップの割れ（捻転差）」が最大に！',
+        foot: '前足が完全に固定される。', bat: '耳の後ろで最大割れ。', torso: '骨盤と肩の角度差が最大。' },
+      { id: 11, name: '骨盤回旋開始', phase: 'SWING', tag: 'スイング', col: 'phase-impact',
+        desc: '下半身から鋭く回転が始まる。手元はまだトップ位置に残る。',
+        foot: '後ろ足の膝が内側へ入り始める。', bat: 'グリップが少し下りる。', torso: '腰が先に回転開始。' },
+      { id: 12, name: 'バットラグ (タメ維持)', phase: 'SWING', tag: 'ラグ', col: 'phase-impact',
+        desc: 'グリップエンドが先行して前へ引っ張られ、バットヘッドが遅れて付いてくる。',
+        foot: '右足つま先で回転。', bat: 'ヘッドが遅れる（ラグ）。', torso: '胸が回り始める。' },
+      { id: 13, name: 'インサイドアウト進入', phase: 'SWING', tag: 'スイング', col: 'phase-impact',
+        desc: '肘が脇に引き込まれ、バットが体に近いインサイド軌道でストライクゾーンへ。',
+        foot: '前足が踏ん張る。', bat: 'グリップが胸の前を通過。', torso: '胸が45度回転。' },
+      { id: 14, name: 'スイングプレーン水平進入', phase: 'SWING', tag: '加速', col: 'phase-impact',
+        desc: 'バットヘッドが鋭く走り、投球軌道に対して水平〜わずかなアッパーに入る。',
+        foot: '強固な前足の支柱。', bat: 'ヘッドが加速して追いつく。', torso: '胸が三塁側へ開く。' },
+      { id: 15, name: '白球到達 (ミート直前)', phase: 'SWING', tag: '加速', col: 'phase-impact',
+        desc: 'ホームベース手前に白球が進入。バットがトップスピードに達する。',
+        foot: '右足が蹴り足となる。', bat: 'ストライクゾーン水平。', torso: '視線は完全にボール。' },
+      { id: 16, name: 'ボールコンタクト直前', phase: 'SWING', tag: '加速', col: 'phase-impact',
+        desc: 'バットの芯がボールの軌道と完全に一致。',
+        foot: '前足がガッチリロック。', bat: '芯の位置がドンピシャ。', torso: '軸が一切ブレない。' },
+      { id: 17, name: 'インパクト一閃！', phase: 'IMPACT', tag: 'インパクト', col: 'phase-impact',
+        desc: 'ホームベース手前でバットが白球を芯で捉える決定的一瞬！両手で強くボールを圧縮。',
+        foot: '前足で全エネルギーを受け止める。', bat: '水平インパクト、火花・スピード線。', torso: '体幹が正面（手前）を向く。' },
+      { id: 18, name: 'ボール射出・押し込み初動', phase: 'IMPACT', tag: '押し込み', col: 'phase-impact',
+        desc: '潰れたボールがバットから猛烈な初速で弾き出される。腕の押し込みが続く。',
+        foot: '前足1本で支える。', bat: 'ボールを押し込む。', torso: '手前へ前傾。' },
+
+      // 行3：押し込み 〜 両腕伸展 〜 体幹回旋 〜 ハイフィニッシュ
+      { id: 19, name: 'インパクト後の押し込み', phase: 'FOLLOW', tag: '押し込み', col: 'phase-finish',
+        desc: '手首を返さず、バットを投手方向へ力強く突き出す押し込み。',
+        foot: '前足ロック、後ろ足つま先立ち。', bat: '前へ突き出す。', torso: '体幹の回旋が続く。' },
+      { id: 20, name: '両腕フル伸展 (パワーエクステンション)', phase: 'FOLLOW', tag: '両腕伸展', col: 'phase-finish',
+        desc: '打者の両腕が投手（画面手前）へ向かってピンと完全に伸び切る名場面！',
+        foot: '前足が地面を踏み締める。', bat: '投手方向へピンと伸びる。', torso: '胸が完全に三塁側へ開く。' },
+      { id: 21, name: 'リストターン (手首の返し)', phase: 'FOLLOW', tag: 'フォロースルー', col: 'phase-finish',
+        desc: '右手が左手の上を通過し、自然に手首が返る。',
+        foot: '後ろ足が完全に回転。', bat: 'バットが左へ振られる。', torso: '背中が見え始める。' },
+      { id: 22, name: 'バット巻き込み進入', phase: 'FOLLOW', tag: 'フォロースルー', col: 'phase-finish',
+        desc: 'バットが胸の前を通過し、左肩の上へと上昇していく。',
+        foot: '体重100%前足へ。', bat: '左胸上へ弧を描く。', torso: '背中が捕手側へ向く。' },
+      { id: 23, name: '体幹フル回旋', phase: 'FOLLOW', tag: 'フォロースルー', col: 'phase-finish',
+        desc: '上半身が完全に回り、打者の背中（背番号）が捕手・バックネット方向を向く。',
+        foot: '前足1本立ち。', bat: '左肩の上へ上昇。', torso: '背番号が捕手側へ。' },
+      { id: 24, name: 'ハイフィニッシュ上昇', phase: 'FINISH', tag: 'フィニッシュ', col: 'phase-finish',
+        desc: 'バットが左肩の高さまで高く巻き上がる。',
+        foot: '後ろ足の裏が後ろを向く。', bat: '左肩上へ巻き上がり。', torso: '回転の減速。' },
+      { id: 25, name: 'フルフィニッシュ完成', phase: 'FINISH', tag: 'フィニッシュ', col: 'phase-finish',
+        desc: 'バットが背中・左肩の上に巻き付き、美しいアーチを描くフルフィニッシュ。',
+        foot: '完璧なバランス。', bat: '左肩上にピタッと収まる。', torso: '背中が完全に捕手側。' },
+      { id: 26, name: '姿勢維持・バランスキープ', phase: 'FINISH', tag: '見送り', col: 'phase-finish',
+        desc: 'フィニッシュの美しいポーズを静止。前足1本でブレずに立ち続ける。',
+        foot: '前足1本立ち。', bat: '左肩上で静止。', torso: '胸を張る。' },
+      { id: 27, name: '打球見送り', phase: 'FINISH', tag: '見送り', col: 'phase-finish',
+        desc: 'ヘルメットのツバを上げ、スタンドへ飛び込む打球の放物線を見送る。',
+        foot: 'バランス静止。', bat: '両手で優雅に保持。', torso: '視線はレフトスタンドへ。' }
+    ];
+
+    // 写真のロード & クロップ描画
+    const refImg = new Image();
+    refImg.src = '/assets/batting_ref_27frames.png';
+
+    const userCanvas = document.getElementById('user-crop-canvas');
+    const userCtx = userCanvas.getContext('2d');
+    const gameCanvas = document.getElementById('game-view-canvas');
+    const gameCtx = gameCanvas.getContext('2d');
+
+    const scrubber = document.getElementById('frame-scrubber');
+    const frameIndicator = document.getElementById('frame-indicator');
+    const curNum1 = document.getElementById('cur-frame-num-1');
+    const curNum2 = document.getElementById('cur-frame-num-2');
+    const curPhase = document.getElementById('cur-phase');
+    const curFootwork = document.getElementById('cur-footwork');
+    const curBat = document.getElementById('cur-bat');
+    const curTorso = document.getElementById('cur-torso');
+
+    let currentFrame = 1;
+    let isPlaying = false;
+    let playTimer = null;
+
+    refImg.onload = () => {
+      renderCurrentFrame(1);
+      renderAllGridCards();
+    };
+
+    function renderCurrentFrame(frameId) {
+      currentFrame = frameId;
+      const f = FRAMES_DATA[frameId - 1];
+
+      const padId = String(frameId).padStart(2, '0');
+      curNum1.innerText = padId;
+      curNum2.innerText = padId;
+      frameIndicator.innerText = `${padId} / 27`;
+      scrubber.value = frameId;
+
+      curPhase.innerText = `${f.name} [${f.tag}]`;
+      curFootwork.innerText = f.foot;
+      curBat.innerText = f.bat;
+      curTorso.innerText = f.torso;
+
+      // 1. 元写真の該当フレームをキャンバスにクロップ
+      // 1018 x 435 (9列 x 3行)
+      const col = (frameId - 1) % 9;
+      const row = Math.floor((frameId - 1) / 9);
+      const cellW = 1018 / 9;
+      const cellH = 435 / 3;
+
+      userCtx.clearRect(0, 0, userCanvas.width, userCanvas.height);
+      userCtx.drawImage(
+        refImg,
+        col * cellW, row * cellH, cellW, cellH,
+        0, 0, userCanvas.width, userCanvas.height
+      );
+
+      // 2. 投手後方センターカメラ視点のベクトルポーズ描画
+      renderPitcherViewPose(gameCtx, gameCanvas.width, gameCanvas.height, frameId);
+    }
+
+    // 投手後方センターカメラ視点（手前に左肩・左足、奥に右肩・バット）の骨格ベクトル作画
+    function renderPitcherViewPose(ctx, w, h, fId) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, w, h);
+
+      // ホームベースと打席のライン（投手後方視点）
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(w * 0.5, h * 0.88, 60, 16, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 各フェーズの補間パラメータ (0.0 〜 1.0)
+      const t = (fId - 1) / 26;
+
+      ctx.save();
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      // 投手後方から見た打者：
+      // - 左肩・左腕が手前（下）、右肩・バットが奥（上〜右）
+      // - コマ1〜9：左足が手前（投手方向）へ滑り出す（すり足）
+      // - コマ10〜17：骨盤が回転し胸が手前へ開く
+      // - コマ18〜27：両腕伸展から左肩の上へバットが巻き上がる
+      const cx = w * 0.48;
+      const cy = h * 0.52;
+
+      // 足の計算
+      const strideT = Math.min(1.0, Math.max(0.0, (fId - 4) / 5)); // 4〜9ですり足前進
+      const swingT = Math.min(1.0, Math.max(0.0, (fId - 10) / 7)); // 10〜17でスイング
+      const followT = Math.min(1.0, Math.max(0.0, (fId - 18) / 8)); // 18〜27でフィニッシュ
+
+      // 軸足（後ろ・右足）：奥側
+      const rearFootX = cx + 28;
+      const rearFootY = cy + 90;
+
+      // 前足（前・左足）：手前側（すり足で手前下へ前進）
+      const frontFootX = cx - 22 - strideT * 18;
+      const frontFootY = cy + 92 + strideT * 8; // 手前へ滑る
+
+      // 腰
+      const hipX = cx + (strideT * 4) + (swingT * 8);
+      const hipY = cy + 30;
+
+      // 影
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.6)';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 96, 50 + strideT * 10, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 脚の描画
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 14;
+      // 右脚（奥）
+      ctx.beginPath();
+      ctx.moveTo(hipX + 8, hipY);
+      ctx.lineTo(rearFootX, rearFootY);
+      ctx.stroke();
+
+      // 左脚（手前・すり足）
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 15;
+      ctx.beginPath();
+      ctx.moveTo(hipX - 8, hipY);
+      ctx.lineTo(frontFootX, frontFootY);
+      ctx.stroke();
+
+      // スパイク
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(rearFootX - 10, rearFootY - 4, 20, 8);
+      ctx.fillRect(frontFootX - 10, frontFootY - 4, 20, 8);
+
+      // 体幹（胴体）：白ユニフォーム
+      // 構え時は左肩が手前、スイング完了後は背中が捕手側へ
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const torsoAngle = (swingT * Math.PI * 0.4) + (followT * Math.PI * 0.45);
+      ctx.ellipse(hipX, hipY - 35, 18, 26, torsoAngle, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 頭部・ヘルメット（紺）
+      // 構え時は左肩越しに手前を見る、フィニッシュ時は打球見送りで上を向く
+      const headX = hipX - 2 + (followT * 4);
+      const headY = hipY - 72 - (followT * 6);
+      ctx.fillStyle = '#1e3a8a';
+      ctx.beginPath();
+      ctx.arc(headX, headY, 14, 0, Math.PI * 2);
+      ctx.fill();
+      // ツバ
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      const visorAngle = followT > 0.5 ? -0.4 : 0.3;
+      ctx.ellipse(headX - 10, headY + 2, 7, 3, visorAngle, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 腕とバット（木製 #d97706）
+      let batStartX, batStartY, batEndX, batEndY;
+
+      if (fId <= 9) {
+        // 構え・すり足中：バットは右耳後ろで両手保持
+        batStartX = headX + 16;
+        batStartY = headY + 8;
+        batEndX = headX + 34;
+        batEndY = headY - 48;
+
+        // 手前・左腕（左肩からバットグリップへ）
+        ctx.strokeStyle = '#1e3a8a';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(hipX - 12, hipY - 45); // 左肩
+        ctx.lineTo(batStartX - 4, batStartY + 10);
+        ctx.stroke();
+
+        // 奥・右腕
+        ctx.beginPath();
+        ctx.moveTo(hipX + 10, hipY - 48); // 右肩
+        ctx.lineTo(batStartX, batStartY);
+        ctx.stroke();
+
+      } else if (fId <= 18) {
+        // スイング〜インパクト：インサイドアウトから水平インパクト
+        const sProg = (fId - 10) / 8; // 0〜1
+        const impactAngle = -Math.PI * 0.3 + (sProg * Math.PI * 0.85);
+
+        batStartX = hipX + Math.cos(impactAngle - 0.5) * 16;
+        batStartY = hipY - 30 + Math.sin(impactAngle - 0.5) * 10;
+        batEndX = batStartX + Math.cos(impactAngle) * 58;
+        batEndY = batStartY - Math.sin(impactAngle) * 20;
+
+        // 腕（インパクトへ向けて伸びる）
+        ctx.strokeStyle = '#1e3a8a';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(hipX - 10, hipY - 42);
+        ctx.lineTo(batStartX, batStartY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hipX + 8, hipY - 45);
+        ctx.lineTo(batStartX + 4, batStartY);
+        ctx.stroke();
+
+        if (fId === 17) {
+          // インパクト火花！
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(batEndX - 10, batEndY, 12, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+      } else {
+        // 押し込み〜両腕フル伸展〜左肩上へのハイフィニッシュ
+        const fProg = (fId - 18) / 9; // 0〜1
+        if (fProg < 0.35) {
+          // 両腕フル伸展（コマ19〜20）
+          batStartX = hipX - 18;
+          batStartY = hipY - 32;
+          batEndX = batStartX - 54;
+          batEndY = batStartY - 12;
+
+          ctx.strokeStyle = '#1e3a8a';
+          ctx.lineWidth = 7;
+          ctx.beginPath();
+          ctx.moveTo(hipX, hipY - 40);
+          ctx.lineTo(batStartX, batStartY);
+          ctx.stroke();
+        } else {
+          // ハイフィニッシュ（コマ21〜27）
+          const wrapProg = (fProg - 0.35) / 0.65;
+          batStartX = headX - 14;
+          batStartY = headY + 8;
+          batEndX = headX + 28 - wrapProg * 12;
+          batEndY = headY - 42 - wrapProg * 10;
+
+          ctx.strokeStyle = '#1e3a8a';
+          ctx.lineWidth = 7;
+          ctx.beginPath();
+          ctx.moveTo(hipX + 6, hipY - 38);
+          ctx.lineTo(batStartX, batStartY);
+          ctx.stroke();
+        }
+      }
+
+      // バット描画（木製）
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(batStartX, batStartY);
+      ctx.lineTo(batEndX, batEndY);
+      ctx.stroke();
+
+      // グリップテープ
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(batStartX, batStartY);
+      ctx.lineTo(batStartX + (batEndX - batStartX) * 0.25, batStartY + (batEndY - batStartY) * 0.25);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // 全27コマの一覧カード生成
+    function renderAllGridCards() {
+      const grid = document.getElementById('storyboard-grid');
+      grid.innerHTML = '';
+
+      FRAMES_DATA.forEach((f) => {
+        const card = document.createElement('div');
+        card.className = 'frame-card';
+        card.onclick = () => renderCurrentFrame(f.id);
+
+        const padId = String(f.id).padStart(2, '0');
+
+        card.innerHTML = `
+          <div class="frame-header">
+            <span>コマ ${padId}：${f.name}</span>
+            <span class="frame-tag ${f.col}">${f.tag}</span>
+          </div>
+          <div class="frame-body">
+            <canvas id="card-canvas-${f.id}" class="frame-crop-canvas" width="90" height="110"></canvas>
+            <canvas id="card-game-${f.id}" class="frame-crop-canvas" width="90" height="110"></canvas>
+          </div>
+          <div class="frame-desc">
+            <div><strong>写真:</strong> ${f.foot}</div>
+            <div><strong>投手視点:</strong> ${f.desc}</div>
+          </div>
+        `;
+
+        grid.appendChild(card);
+
+        // 写真クロップ
+        const c1 = document.getElementById(`card-canvas-${f.id}`);
+        const ctx1 = c1.getContext('2d');
+        const col = (f.id - 1) % 9;
+        const row = Math.floor((f.id - 1) / 9);
+        const cellW = 1018 / 9;
+        const cellH = 435 / 3;
+        ctx1.drawImage(refImg, col * cellW, row * cellH, cellW, cellH, 0, 0, c1.width, c1.height);
+
+        // 投手視点プレビュー
+        const c2 = document.getElementById(`card-game-${f.id}`);
+        const ctx2 = c2.getContext('2d');
+        renderPitcherViewPose(ctx2, c2.width, c2.height, f.id);
+      });
+    }
+
+    // 再生・スクラバー制御
+    scrubber.oninput = (e) => {
+      renderCurrentFrame(parseInt(e.target.value, 10));
+    };
+
+    const playBtn = document.getElementById('play-btn');
+    playBtn.onclick = () => {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        playBtn.innerText = '⏸ 一時停止';
+        playTimer = setInterval(() => {
+          let next = currentFrame + 1;
+          if (next > 27) next = 1;
+          renderCurrentFrame(next);
+        }, 1000 / 18); // 18fps (約1.5秒で1スイング一巡)
+      } else {
+        playBtn.innerText = '▶ 再生 / 停止';
+        clearInterval(playTimer);
+      }
+    };
+  </script>
+</body>
+</html>

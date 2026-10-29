@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第107回 全国高等学校野球選手権 福岡大会 公式ガイドブック - KokoSim 5</title>
+  <style>
+    :root {
+      --primary-navy: #102a4c;
+      --primary-blue: #1d4ed8;
+      --accent-gold: #f59e0b;
+      --accent-red: #dc2626;
+      --bg-gray: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      background-color: var(--bg-gray);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .guide-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    /* MASTHEAD */
+    .masthead {
+      background: linear-gradient(135deg, #0b192c, #1e3e62);
+      color: #fff;
+      padding: 32px 40px;
+      border-bottom: 4px solid var(--accent-gold);
+      position: relative;
+    }
+    .masthead-badge {
+      display: inline-block;
+      background: var(--accent-red);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .masthead-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #fef08a;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .masthead-subtitle {
+      font-size: 15px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .masthead-meta {
+      margin-top: 16px;
+      font-size: 12.5px;
+      color: #94a3b8;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .print-btn {
+      position: absolute;
+      top: 32px;
+      right: 40px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .print-btn:hover {
+      background: #fff;
+      color: var(--primary-navy);
+    }
+    /* NAV ANCHORS */
+    .guide-nav {
+      background: #f1f5f9;
+      padding: 12px 40px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .guide-nav a {
+      color: var(--primary-navy);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 4px;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+    }
+    .guide-nav a:hover {
+      background: var(--primary-navy);
+      color: #fff;
+      border-color: var(--primary-navy);
+    }
+    /* CONTENT SECTIONS */
+    .guide-content {
+      padding: 32px 40px;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary-navy);
+      border-left: 6px solid var(--accent-red);
+      padding-left: 14px;
+      margin: 36px 0 20px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title:first-child {
+      margin-top: 0;
+    }
+    /* PYRAMID / TIERS */
+    .pyramid-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .tier-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .tier-card.tier-honmei {
+      border-top: 4px solid var(--accent-red);
+      background: #fff5f5;
+    }
+    .tier-card.tier-taiko {
+      border-top: 4px solid #f97316;
+      background: #fffaf0;
+    }
+    .tier-card.tier-yuryoku {
+      border-top: 4px solid var(--primary-blue);
+      background: #f0f7ff;
+    }
+    .tier-card.tier-darkhorse {
+      border-top: 4px solid #64748b;
+      background: #f8fafc;
+    }
+    .tier-label {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .tier-honmei .tier-label { color: var(--accent-red); }
+    .tier-taiko .tier-label { color: #ea580c; }
+    .tier-yuryoku .tier-label { color: var(--primary-blue); }
+    .tier-darkhorse .tier-label { color: #475569; }
+    .tier-school {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .tier-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    /* PROSPECTS CARDS */
+    .prospects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+    .prospect-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 18px;
+      background: #fff;
+      display: flex;
+      gap: 16px;
+    }
+    .prospect-avatar {
+      width: 70px;
+      height: 85px;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+    .prospect-avatar span {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .prospect-info {
+      flex: 1;
+    }
+    .prospect-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+    .prospect-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--primary-navy);
+    }
+    .prospect-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .prospect-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .prospect-stats {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #b91c1c;
+      margin-bottom: 6px;
+    }
+    .prospect-scout {
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.45;
+      background: #f8fafc;
+      padding: 8px;
+      border-radius: 4px;
+      border-left: 3px solid #94a3b8;
+    }
+    /* SCHOOL TEAM SECTION */
+    .school-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 32px;
+      background: #fff;
+    }
+    .school-header {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .school-title-area h3 {
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .school-subtitle {
+      font-size: 12.5px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .school-stats-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .stat-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .stat-badge.gold {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: var(--accent-gold);
+      color: #fef08a;
+    }
+    /* ROSTER TABLE */
+    .roster-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .roster-table th, .roster-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .roster-table th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 700;
+    }
+    .roster-table tr:hover {
+      background: #f8fafc;
+    }
+    .roster-table tr.highlight-star {
+      background: #fffbeb;
+    }
+    .num-col {
+      font-weight: 800;
+      color: var(--accent-red);
+      width: 45px;
+    }
+    .pos-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+    .skill-tag {
+      font-size: 11.5px;
+      color: #0369a1;
+      font-weight: 600;
+    }
+    /* FOOTER */
+    footer {
+      background: #f1f5f9;
+      padding: 24px 40px;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+    @media print {
+      body { padding: 0; background: #fff; }
+      .guide-container { box-shadow: none; border: none; }
+      .print-btn, .guide-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="guide-container">
+    <!-- MASTHEAD -->
+    <header class="masthead">
+      <div class="masthead-badge">KOKOSIM 5 OFFICIAL TOURNAMENT GUIDE</div>
+      <h1 class="masthead-title">第107回 全国高等学校野球選手権 福岡大会 公式ガイドブック ＆ 大会展望号</h1>
+      <div class="masthead-subtitle">
+        参加136校の戦力分析・注目選手名鑑・全登録メンバー・激闘トーナメント展望を完全網羅
+      </div>
+      <div class="masthead-meta">
+        <span>📅 開催会期: 2026年7月5日〜7月27日</span>
+        <span>🏟️ 主会場: 福岡県営春日公園野球場 / 北九州市民球場 / 平和台球場</span>
+        <span>⚾ 福岡県高等学校野球連盟 ＆ KokoSim 5 記録編纂室 発行</span>
+      </div>
+      <button class="print-btn" onclick="window.print()">🖨️ ガイドを印刷 / PDF保存</button>
+    </header>
+
+    <!-- ANCHOR NAV -->
+    <nav class="guide-nav">
+      <a href="#overview">📰 大会総展望・勢力ピラミッド</a>
+      <a href="#prospects">🌟 ドラフト注目選手TOP4</a>
+      <a href="#school-seiun">🏛️ 青雲高校（第1シード）</a>
+      <a href="#school-kyukoku">🏛️ 九州国際大付（第2シード）</a>
+      <a href="#schedule">📊 大会日程・球場案内</a>
+    </nav>
+
+    <div class="guide-content">
+      <!-- 1. OVERVIEW -->
+      <section id="overview">
+        <h2 class="section-title">📰 大会総展望：絶対本命・青雲を追う私学4強の激突</h2>
+        <p style="margin-bottom: 20px; font-size: 14.5px; line-height: 1.8; color: #334155;">
+          夏の甲子園切符をかけた熱き福岡の夏が開幕する。今大会の最大の焦点は、<strong>昨夏全国制覇を達成した「青雲高校」の夏連覇なるか</strong>、それともライバル私学勢が雪辱を果たすかの一点に尽きる。<br>
+          青雲は最速154km/hの世代最強右腕・神崎晴樹と、高校通算42本塁打の大型スラッガー・逢坂慶次が健在。投打の軸の太さは全国でもトップクラスだ。しかし、昨秋の九州大会を制した九州国際大付属は高校屈指の長打力を誇り、西日本短大付属、福岡大大濠も好投手を擁して虎視眈々と頂点を狙う。
+        </p>
+
+        <div class="pyramid-grid">
+          <div class="tier-card tier-honmei">
+            <div class="tier-label">本命 (Grade A+)</div>
+            <div class="tier-school">青雲高等学校 [第1シード]</div>
+            <div class="tier-desc">昨夏甲子園制覇のエース神崎と4番逢坂を擁し投打に隙なし。機動力と堅守もハイレベル。</div>
+          </div>
+          <div class="tier-card tier-taiko">
+            <div class="tier-label">対抗 (Grade A+)</div>
+            <div class="tier-school">九州国際大付属 [第2シード]</div>
+            <div class="tier-desc">今大会本塁打量産の4番馬原を中心とする超強力重量打線。剛腕左腕・小手川の安定感が鍵。</div>
+          </div>
+          <div class="tier-card tier-yuryoku">
+            <div class="tier-label">有力 (Grade A)</div>
+            <div class="tier-school">西日本短大付 / 福大大濠</div>
+            <div class="tier-desc">伝統の機動破壊と鉄壁の内野陣を誇る西短と、大型右腕と粘り強い打撃が光る福大大濠。</div>
+          </div>
+          <div class="tier-card tier-darkhorse">
+            <div class="tier-label">伏兵 (Grade B+)</div>
+            <div class="tier-school">東福岡 / 筑陽学園 / 飯塚</div>
+            <div class="tier-desc">ノーシードから上位進出を虎視眈々と狙う強豪校。シード校にとって初戦最大の刺客。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. PROSPECTS -->
+      <section id="prospects">
+        <h2 class="section-title">🌟 ドラフト注目選手・トッププロスペクト 特選</h2>
+        <div class="prospects-grid">
+          <!-- Prospect 1 -->
+          <div class="prospect-card">
+            <div class="prospect-avatar">
+              ⚾<span>PITCHER</span>
+            </div>
+            <div class="prospect-info">
+              <div class="prospect-header">
+                <span class="prospect-name">神崎 晴樹 (3年)</span>
+                <span class="prospect-tag">ドラフト1位確実</span>
+              </div>
+              <div class="prospect-meta">青雲高校 / 投手 / 右投右打 / 183cm 82kg</div>
+              <div class="prospect-stats">最速 154 km/h ・ 防御率 0.75 ・ 奪三振率 12.4</div>
+              <div class="prospect-scout">
+                世代No.1の本格派右腕。角度のある快速球と鋭いフォークの切れ味はプロ即戦力級。昨夏甲子園決勝で完投勝利を挙げた大舞台での勝負強さも魅力。
+              </div>
+            </div>
+          </div>
+
+          <!-- Prospect 2 -->
+          <div class="prospect-card">
+            <div class="prospect-avatar">
+              🏏<span>SLUGGER</span>
+            </div>
+            <div class="prospect-info">
+              <div class="prospect-header">
+                <span class="prospect-name">逢坂 慶次 (3年)</span>
+                <span class="prospect-tag">ドラフト上位候補</span>
+              </div>
+              <div class="prospect-meta">青雲高校 / 一塁・三塁 / 右投左打 / 185cm 88kg</div>
+              <div class="prospect-stats">高校通算 42 本塁打 ・ 甲子園 3発 ・ 打率 .418</div>
+              <div class="prospect-scout">
+                天性の長打力と広角に長打を打ち分ける天才打者。甲子園での1試合3発は大会タイ記録。逆方向への打球の伸びは高校生離れしている。
+              </div>
+            </div>
+          </div>
+
+          <!-- Prospect 3 -->
+          <div class="prospect-card">
+            <div class="prospect-avatar">
+              ⚾<span>LHP</span>
+            </div>
+            <div class="prospect-info">
+              <div class="prospect-header">
+                <span class="prospect-name">小手川 拓也 (3年)</span>
+                <span class="prospect-tag">注目剛腕左腕</span>
+              </div>
+              <div class="prospect-meta">九州国際大付 / 投手 / 左投左打 / 179cm 78kg</div>
+              <div class="prospect-stats">最速 148 km/h ・ 防御率 1.12 ・ 奪三振率 10.2</div>
+              <div class="prospect-scout">
+                サイド気味のスリークォーターから放たれるクロスファイヤーが強烈。左打者の外角へ逃げるスライダーと内角直球の出し入れが抜群。
+              </div>
+            </div>
+          </div>
+
+          <!-- Prospect 4 -->
+          <div class="prospect-card">
+            <div class="prospect-avatar">
+              🏏<span>CLEANUP</span>
+            </div>
+            <div class="prospect-info">
+              <div class="prospect-header">
+                <span class="prospect-name">馬原 達也 (3年)</span>
+                <span class="prospect-tag">強打のスラッガー</span>
+              </div>
+              <div class="prospect-meta">九州国際大付 / 三塁・外野 / 右投右打 / 182cm 84kg</div>
+              <div class="prospect-stats">高校通算 39 本塁打 ・ 今大会打率 .538 3本塁打</div>
+              <div class="prospect-scout">
+                強烈な打球初速を誇る九国の主砲。インコースの直球を完璧にスタンドへ運ぶ技術を持つ。チャンスでの勝負強さは大会随一。
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. SCHOOL DETAILS: SEIUN -->
+      <section id="school-seiun">
+        <h2 class="section-title">🏛️ 主要校 戦力分析 ＆ 登録部員名鑑</h2>
+
+        <div class="school-card">
+          <div class="school-header">
+            <div class="school-title-area">
+              <h3>青雲高等学校 [第1シード / 私立 / 創部18年目]</h3>
+              <div class="school-subtitle">所在地: 福岡市南区 / 部員数: 62名 / 甲子園出場: 春2回・夏4回（昨夏全国制覇）</div>
+            </div>
+            <div class="school-stats-badges">
+              <span class="stat-badge gold">総合ランク: A+ (91)</span>
+              <span class="stat-badge">投手 95</span>
+              <span class="stat-badge">打撃 89</span>
+              <span class="stat-badge">機動 93</span>
+              <span class="stat-badge">守備 90</span>
+              <span class="stat-badge">選手層 91</span>
+            </div>
+          </div>
+
+          <!-- TEAM POWER RADAR CHART & ANALYSIS -->
+          <div style="display: flex; gap: 24px; padding: 20px 24px; background: #f8fafc; border-bottom: 1px solid var(--border-color); align-items: center; flex-wrap: wrap;">
+            <div style="flex-shrink: 0; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;">戦力レーダーチャート</div>
+              <svg width="220" height="190" viewBox="0 0 220 190">
+                <!-- Concentric Web -->
+                <polygon points="110,35 172,80 148,153 72,153 48,80" fill="none" stroke="#cbd5e1" stroke-dasharray="3,3" stroke-width="1"/>
+                <polygon points="110,51 156,85 138,140 82,140 64,85" fill="none" stroke="#cbd5e1" stroke-dasharray="3,3" stroke-width="1"/>
+                <polygon points="110,67 141,90 129,126 91,126 79,90" fill="none" stroke="#cbd5e1" stroke-dasharray="3,3" stroke-width="1"/>
+                <!-- Axes -->
+                <line x1="110" y1="100" x2="110" y2="35" stroke="#cbd5e1" stroke-width="1"/>
+                <line x1="110" y1="100" x2="172" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+                <line x1="110" y1="100" x2="148" y2="153" stroke="#cbd5e1" stroke-width="1"/>
+                <line x1="110" y1="100" x2="72" y2="153" stroke="#cbd5e1" stroke-width="1"/>
+                <line x1="110" y1="100" x2="48" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+                <!-- Team Seiun Polygon -->
+                <polygon points="110,38 165,82 146,149 76,147 54,82" fill="rgba(37, 99, 235, 0.3)" stroke="#2563eb" stroke-width="2.5"/>
+                <circle cx="110" cy="38" r="3" fill="#2563eb"/>
+                <circle cx="165" cy="82" r="3" fill="#2563eb"/>
+                <circle cx="146" cy="149" r="3" fill="#2563eb"/>
+                <circle cx="76" cy="147" r="3" fill="#2563eb"/>
+                <circle cx="54" cy="82" r="3" fill="#2563eb"/>
+                <!-- Labels -->
+                <text x="110" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e293b">投手 95</text>
+                <text x="180" y="84" text-anchor="start" font-size="11" font-weight="bold" fill="#dc2626">打撃 89</text>
+                <text x="156" y="168" text-anchor="middle" font-size="11" font-weight="bold" fill="#16a34a">機動 93</text>
+                <text x="64" y="168" text-anchor="middle" font-size="11" font-weight="bold" fill="#7c3aed">守備 90</text>
+                <text x="40" y="84" text-anchor="end" font-size="11" font-weight="bold" fill="#0284c7">選手層 91</text>
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 280px;">
+              <h4 style="font-size: 14px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px;">【戦力分析総括】投打の軸が盤石。機動破壊と鉄壁の内野守備で夏連覇へ隙なし</h4>
+              <p style="font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 8px;">
+                最速154km/hエース・神崎と第2先発・成瀬の2枚看板による投手力は全国トップクラス。打線も4番・逢坂を中軸に、早坂・五十嵐の1・2番が足で相手守備網を切り裂く「機動破壊」が確立。失策わずか1の鉄壁守備も含め、死角が見当たらない優勝最有力候補。
+              </p>
+              <div style="font-size: 12px; color: #64748b; background: #fff; padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border-color); display: inline-block;">
+                <strong>監督方針:</strong> 機動力重視・センター返し徹底
+              </div>
+            </div>
+          </div>
+
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th class="num-col">背番</th>
+                <th>氏名</th>
+                <th>学年</th>
+                <th>位置</th>
+                <th>投打</th>
+                <th>身長/体重</th>
+                <th>公式戦成績</th>
+                <th>選手特徴・主な特殊能力</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="highlight-star">
+                <td class="num-col">1</td>
+                <td><strong>神崎 晴樹</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">投手</span></td>
+                <td>右右</td>
+                <td>183cm 82kg</td>
+                <td>防御率 0.75 (14K)</td>
+                <td><span class="skill-tag">最速154km/h 奪三振◎ キレ◎ 闘志 エースの自覚</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">2</td>
+                <td><strong>結城 健司</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">捕手</span></td>
+                <td>右右</td>
+                <td>178cm 80kg</td>
+                <td>打率 .333 1本 6点</td>
+                <td><span class="skill-tag">キャッチャーA 強肩B 司令塔 リード抜群</span></td>
+              </tr>
+              <tr class="highlight-star">
+                <td class="num-col">3</td>
+                <td><strong>逢坂 慶次</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">一塁</span></td>
+                <td>右左</td>
+                <td>185cm 88kg</td>
+                <td>打率 .418 3本 12点</td>
+                <td><span class="skill-tag">パワーヒッター 高校通算42発 広角打法 勝負師</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">4</td>
+                <td><strong>五十嵐 翔</strong></td>
+                <td>2年</td>
+                <td><span class="pos-badge">二塁</span></td>
+                <td>右左</td>
+                <td>174cm 68kg</td>
+                <td>打率 .362 0本 4盗</td>
+                <td><span class="skill-tag">守備職人 盗塁○ 内野安打○ 俊足巧打</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">5</td>
+                <td><strong>坂本 悠太</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">三塁</span></td>
+                <td>右右</td>
+                <td>176cm 74kg</td>
+                <td>打率 .305 1本 8点</td>
+                <td><span class="skill-tag">チャンスA サヨナラ男 粘り打ち 精神的支柱</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">6</td>
+                <td><strong>早坂 隼人</strong></td>
+                <td>2年</td>
+                <td><span class="pos-badge">遊撃</span></td>
+                <td>右両</td>
+                <td>172cm 65kg</td>
+                <td>打率 .358 0本 6盗</td>
+                <td><span class="skill-tag">走力S スイッチヒッター 盗塁A バント職人</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">7</td>
+                <td><strong>牧 慎太郎</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">左翼</span></td>
+                <td>左左</td>
+                <td>180cm 76kg</td>
+                <td>打率 .288 1本 5点</td>
+                <td><span class="skill-tag">流し打ち 選球眼◎ 犠打○ 状況判断力</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">8</td>
+                <td><strong>藤原 陽介</strong></td>
+                <td>2年</td>
+                <td><span class="pos-badge">中堅</span></td>
+                <td>右右</td>
+                <td>177cm 70kg</td>
+                <td>打率 .312 0本 3盗</td>
+                <td><span class="skill-tag">レーザービーム 守備範囲S 外野の要</span></td>
+              </tr>
+              <tr class="highlight-star">
+                <td class="num-col">9</td>
+                <td><strong>成瀬 翔</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">右翼</span></td>
+                <td>左左</td>
+                <td>181cm 79kg</td>
+                <td>打率 .345 / 防1.20</td>
+                <td><span class="skill-tag">第2先発・二刀流 最速145km/h 強肩A 投打の軸</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">10</td>
+                <td><strong>佐々木 涼</strong></td>
+                <td>2年</td>
+                <td><span class="pos-badge">投手</span></td>
+                <td>右右</td>
+                <td>179cm 73kg</td>
+                <td>防御率 1.42 (8K)</td>
+                <td><span class="skill-tag">リリーフエース コントロールA スライダー◎</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">11</td>
+                <td><strong>木村 拓巳</strong></td>
+                <td>1年</td>
+                <td><span class="pos-badge">投手</span></td>
+                <td>左左</td>
+                <td>180cm 72kg</td>
+                <td>防御率 1.80 (6K)</td>
+                <td><span class="skill-tag">期待の大型ルーキー左腕 伸びしろ◎ スクリュー</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">12</td>
+                <td><strong>中西 勇人</strong></td>
+                <td>2年</td>
+                <td><span class="pos-badge">捕手</span></td>
+                <td>右右</td>
+                <td>175cm 77kg</td>
+                <td>打率 .260 0本 2点</td>
+                <td><span class="skill-tag">控え捕手 キャッチャーB ブロック○ 意外性</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SCHOOL DETAILS: KYUKOKU -->
+        <div class="school-card" id="school-kyukoku">
+          <div class="school-header" style="background: linear-gradient(135deg, #450a0a, #1f2937);">
+            <div class="school-title-area">
+              <h3>九州国際大学付属高等学校 [第2シード / 私立 / 北九州市八幡東区]</h3>
+              <div class="school-subtitle">部員数: 75名 / 甲子園出場: 春3回・夏6回（昨秋九州大会優勝）</div>
+            </div>
+            <div class="school-stats-badges">
+              <span class="stat-badge gold">総合ランク: A+ (89)</span>
+              <span class="stat-badge">投手 86</span>
+              <span class="stat-badge" style="background: rgba(220, 38, 38, 0.4);">打撃 94</span>
+              <span class="stat-badge">機動 84</span>
+              <span class="stat-badge">守備 85</span>
+              <span class="stat-badge">選手層 88</span>
+            </div>
+          </div>
+
+          <!-- TEAM POWER RADAR CHART & ANALYSIS -->
+          <div style="display: flex; gap: 24px; padding: 20px 24px; background: #fff5f5; border-bottom: 1px solid #fecaca; align-items: center; flex-wrap: wrap;">
+            <div style="flex-shrink: 0; background: #fff; border: 1px solid #fecaca; border-radius: 8px; padding: 10px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; color: #991b1b; margin-bottom: 4px;">戦力レーダーチャート</div>
+              <svg width="220" height="190" viewBox="0 0 220 190">
+                <!-- Concentric Web -->
+                <polygon points="110,35 172,80 148,153 72,153 48,80" fill="none" stroke="#fca5a5" stroke-dasharray="3,3" stroke-width="1"/>
+                <polygon points="110,51 156,85 138,140 82,140 64,85" fill="none" stroke="#fca5a5" stroke-dasharray="3,3" stroke-width="1"/>
+                <polygon points="110,67 141,90 129,126 91,126 79,90" fill="none" stroke="#fca5a5" stroke-dasharray="3,3" stroke-width="1"/>
+                <!-- Axes -->
+                <line x1="110" y1="100" x2="110" y2="35" stroke="#fca5a5" stroke-width="1"/>
+                <line x1="110" y1="100" x2="172" y2="80" stroke="#fca5a5" stroke-width="1"/>
+                <line x1="110" y1="100" x2="148" y2="153" stroke="#fca5a5" stroke-width="1"/>
+                <line x1="110" y1="100" x2="72" y2="153" stroke="#fca5a5" stroke-width="1"/>
+                <line x1="110" y1="100" x2="48" y2="80" stroke="#fca5a5" stroke-width="1"/>
+                <!-- Team Kyukoku Polygon -->
+                <polygon points="110,44 168,81 142,144 78,145 56,82" fill="rgba(220, 38, 38, 0.3)" stroke="#dc2626" stroke-width="2.5"/>
+                <circle cx="110" cy="44" r="3" fill="#dc2626"/>
+                <circle cx="168" cy="81" r="3" fill="#dc2626"/>
+                <circle cx="142" cy="144" r="3" fill="#dc2626"/>
+                <circle cx="78" cy="145" r="3" fill="#dc2626"/>
+                <circle cx="56" cy="82" r="3" fill="#dc2626"/>
+                <!-- Labels -->
+                <text x="110" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e293b">投手 86</text>
+                <text x="180" y="84" text-anchor="start" font-size="11" font-weight="bold" fill="#dc2626">打撃 94</text>
+                <text x="156" y="168" text-anchor="middle" font-size="11" font-weight="bold" fill="#16a34a">機動 84</text>
+                <text x="64" y="168" text-anchor="middle" font-size="11" font-weight="bold" fill="#7c3aed">守備 85</text>
+                <text x="40" y="84" text-anchor="end" font-size="11" font-weight="bold" fill="#0284c7">選手層 88</text>
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 280px;">
+              <h4 style="font-size: 14px; font-weight: 800; color: #991b1b; margin-bottom: 6px;">【戦力分析総括】大会屈指の超重量打線。一発攻勢で相手投手を粉砕する破壊力</h4>
+              <p style="font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 8px;">
+                4番・馬原を筆頭とするクリーンナップの長打力は今大会No.1。甘い球は一撃でスタンドへ運ぶ破壊力を持つ。エース左腕・小手川が失点を2点以内に抑えれば勝機は十分。青雲投手陣との真っ向勝負が注目される。
+              </p>
+              <div style="font-size: 12px; color: #64748b; background: #fff; padding: 6px 12px; border-radius: 4px; border: 1px solid #fecaca; display: inline-block;">
+                <strong>監督方針:</strong> 強振徹底・長打重視
+              </div>
+            </div>
+          </div>
+
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th class="num-col">背番</th>
+                <th>氏名</th>
+                <th>学年</th>
+                <th>位置</th>
+                <th>投打</th>
+                <th>身長/体重</th>
+                <th>公式戦成績</th>
+                <th>選手特徴・主な特殊能力</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="highlight-star">
+                <td class="num-col">1</td>
+                <td><strong>小手川 拓也</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">投手</span></td>
+                <td>左左</td>
+                <td>179cm 78kg</td>
+                <td>防御率 1.12 (10K)</td>
+                <td><span class="skill-tag">最速148km/h クロスファイヤー スライダー◎ 連投耐性</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">2</td>
+                <td><strong>工藤 龍一</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">捕手</span></td>
+                <td>右右</td>
+                <td>180cm 84kg</td>
+                <td>打率 .310 2本 8点</td>
+                <td><span class="skill-tag">強肩A 送球◎ 意外性 パワー型捕手</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">3</td>
+                <td><strong>野村 裕太</strong></td>
+                <td>2年</td>
+                <td><span class="pos-badge">一塁</span></td>
+                <td>右右</td>
+                <td>184cm 86kg</td>
+                <td>打率 .340 2本 9点</td>
+                <td><span class="skill-tag">長打力B チャンス○ プルヒッター</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">4</td>
+                <td><strong>石川 航平</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">二塁</span></td>
+                <td>右左</td>
+                <td>172cm 66kg</td>
+                <td>打率 .295 0本 2盗</td>
+                <td><span class="skill-tag">堅実な守備 併殺崩し 送りバント◎</span></td>
+              </tr>
+              <tr class="highlight-star">
+                <td class="num-col">5</td>
+                <td><strong>馬原 達也</strong></td>
+                <td>3年</td>
+                <td><span class="pos-badge">三塁</span></td>
+                <td>右右</td>
+                <td>182cm 84kg</td>
+                <td>打率 .538 3本 11点</td>
+                <td><span class="skill-tag">高校通算39発 フルスイング 打球初速No.1 威圧感</span></td>
+              </tr>
+              <tr>
+                <td class="num-col">6</td>
+                <td><strong>白石 健吾</strong></td>
+                <td>2年</td>
+                <td><span class="pos-badge">中堅</span></td>
+                <td>右左</td>
+                <td>176cm 68kg</td>
+                <td>打率 .420 1本 4盗</td>
+                <td><span class="skill-tag">出塁率.615 俊足巧打 悪球打ち チャンスメーカー</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. SCHEDULE & STADIUMS -->
+      <section id="schedule">
+        <h2 class="section-title">📊 大会日程 ＆ 球場アクセス案内</h2>
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px;">
+          <ul style="padding-left: 20px; line-height: 1.8; font-size: 13.5px; color: #334155;">
+            <li><strong>7月25日(土) 準決勝（春日球場）</strong>：
+              第1試合 10:00〜 青雲高校 vs 九州国際大付 / 第2試合 13:00〜 西日本短大付 vs 福大大濠
+            </li>
+            <li><strong>7月26日(日) 休養日</strong>：選手の体調管理・コンディショニング調整</li>
+            <li><strong>7月27日(月) 決勝戦（平和台野球場）</strong>：
+              13:00 プレイボール予定（勝者は第107回全国高校野球選手権大会へ出場）
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>高校野球シミュレーション5（KokoSim 5） ゲーム内出力データ</p>
+      <p style="margin-top: 4px;">© 2026 KokoSim Project / 福岡県高校野球連盟公認 大会記録編纂室</p>
+    </footer>
+  </div>
+</body>
+</html>

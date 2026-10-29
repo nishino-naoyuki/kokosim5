@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#112244" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+    <title>高校野球シミュレーション5 (KokoSim 5)</title>
+  </head>
+  <body>
+    <div id="viewport-stage">
+      <div id="app"></div>
+      <div id="modal-host"></div>
+    </div>
+    <div id="landscape-guard" aria-live="polite">
+      <div class="lg-card">
+        <div class="lg-icon">📱↻</div>
+        <h2>スマートフォンを横向きにしてください</h2>
+        <p>高校野球シミュレーション5 は<b>横画面（ランドスケープ）固定</b>に対応しています。<br>本体を横に回転させると自動的に画面が表示されます。</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

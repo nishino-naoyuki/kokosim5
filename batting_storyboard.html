@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>⚾ KokoSim 5 3D打撃フォーム＆27コマ絵コンテ比較プレイヤー</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 22px; color: #fbbf24; margin-bottom: 6px; }
+    .subtitle { color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
+
+    .section-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #38bdf8;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 比較プレイヤー */
+    .player-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .view-box {
+      flex: 1;
+      min-width: 290px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .view-title {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .preview-canvas {
+      display: inline-block;
+      border-radius: 6px;
+      border: 2px solid #475569;
+      background: #1e293b;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-right: 4px;
+    }
+    .badge-user { background: #ea580c; color: #fff; }
+    .badge-game { background: #0284c7; color: #fff; }
+
+    .camera-btns {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .cam-btn {
+      background: #334155;
+      color: #e2e8f0;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .cam-btn.active {
+      background: #0284c7;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .scrubber { flex: 1; height: 8px; cursor: pointer; }
+    .btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn:hover { background: #1d4ed8; }
+
+    .grid-27 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .frame-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .frame-card:hover { border-color: #38bdf8; transform: translateY(-2px); }
+    .frame-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⚾ KokoSim 5 3D打撃フォーム＆27コマ絵コンテ比較プレイヤー</h1>
+  <div class="subtitle">
+    投手と同じ「3D骨格ボーン＋セルシェーダー」方式により、TV中継センターカメラ視点（投手後方）および元写真視点（3塁側横）で27コマ連続打撃モーションをリアルタイム検証
+  </div>
+
+  <!-- 1. メイン 比較プレイヤー -->
+  <div class="section-card">
+    <div class="section-title">🎬 27コマ連続フロー：写真（横アングル） ⇄ 本番実機3D（センターカメラ視点）リアルタイム比較</div>
+    <div class="player-container">
+      
+      <!-- 左：元写真の該当コマ -->
+      <div class="view-box">
+        <div class="view-title">
+          <span class="badge badge-user">元写真（横アングル・3塁側）</span> コマ <span id="cur-f1">01</span> / 27
+        </div>
+        <canvas id="photo-canvas" class="preview-canvas" width="280" height="320"></canvas>
+      </div>
+
+      <!-- 中央：ゲーム本番実機 3Dボーンモデル -->
+      <div class="view-box" style="flex: 1.2;">
+        <div class="view-title">
+          <span class="badge badge-game">実機3Dボーンモデル</span> コマ <span id="cur-f2">01</span> / 27
+          <span id="cam-label" style="color: #38bdf8; font-size: 11px;">（TV中継センター視点・投手後方）</span>
+        </div>
+        <div id="three-container" class="preview-canvas" style="width: 280px; height: 320px; margin: 0 auto; overflow: hidden;"></div>
+        <div class="camera-btns">
+          <button class="cam-btn active" id="btn-cam-center">⚾ センターカメラ（投手後方）</button>
+          <button class="cam-btn" id="btn-cam-side">📷 3塁側横（写真アングル）</button>
+        </div>
+      </div>
+
+      <!-- 右：動作仕様説明 -->
+      <div class="view-box" style="text-align: left; font-size: 13px;">
+        <div class="view-title" style="color: #fbbf24;">📋 現在コマの打撃バイオメカニクス</div>
+        <div style="margin-bottom: 8px;"><strong>動作:</strong> <span id="desc-name" style="color: #38bdf8;">セット構え</span></div>
+        <div style="margin-bottom: 8px;"><strong>足の動き:</strong> <span id="desc-foot">両足均等に体重配置。膝を軽く曲げ低重心。</span></div>
+        <div style="margin-bottom: 8px;"><strong>バット・腕:</strong> <span id="desc-bat">角度45°、右耳後ろで両手保持。</span></div>
+        <div style="margin-bottom: 8px;"><strong>体幹・視線:</strong> <span id="desc-torso">左肩を手前に向け、首越しに投手を直視。</span></div>
+        <div style="color: #94a3b8; font-size: 11px; margin-top: 14px; line-height: 1.4;">
+          ※投手と同じ3Dトゥーンシェーダー骨格（Three.js）で動作しているため、すり足ステップの低さ、バットのしなり、インパクト時の押し込み、ハイフィニッシュの巻き上がりを360度正確に確認できます。
+        </div>
+      </div>
+
+    </div>
+
+    <!-- スクラバー・再生コントロール -->
+    <div class="controls">
+      <button class="btn" id="play-btn">▶ 再生 / 停止</button>
+      <input type="range" class="scrubber" id="scrubber" min="1" max="27" value="1">
+      <span style="font-weight: bold; width: 64px;" id="indicator">01 / 27</span>
+    </div>
+  </div>
+
+  <!-- 2. 全27コマ 一覧カード -->
+  <div class="section-card">
+    <div class="section-title">📑 【絵コンテ全27コマ】動作分解一覧</div>
+    <div class="grid-27" id="cards-grid"></div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { create3DBatterRig } from '/src/render/batterRig.ts';
+
+    const FRAMES_DATA = [
+      { id: 1, name: '構え (Stance)', foot: '両足均等。膝を軽く曲げ低重心。', bat: '角度45°、右耳後ろで両手保持。', torso: '左肩を手前に向け、首越しに投手を直視。' },
+      { id: 2, name: '構え維持・脱力', foot: '両足均等。', bat: '右耳後ろで維持。', torso: 'リラックス。' },
+      { id: 3, name: '軸足タメ始動', foot: '右足股関節に体重70%。', bat: '手元は動かさずキープ。', torso: '軸足側に少し沈み込む。' },
+      { id: 4, name: '左踵浮かし (ヒールアップ)', foot: '左踵が2cm浮く。右足で立つ。膝は上げない！', bat: 'トップの準備。', torso: '骨盤の捻転準備。' },
+      { id: 5, name: 'すり足始動 (低重心ホバー)', foot: '左足が地面スレスレ4cmを前進。膝は胸まで上げない！', bat: '手元は耳の後ろに残る。', torso: '頭の高さが変わらない。' },
+      { id: 6, name: 'すり足前進', foot: '足首高さで前進。', bat: 'トップ位置キープ。', torso: '胸は奥を向いたまま。' },
+      { id: 7, name: 'ステップ伸展', foot: 'ストライドが最大幅へ。', bat: 'バットヘッドは後ろに残る。', torso: '捻転差が蓄積。' },
+      { id: 8, name: '接地直前態勢', foot: 'つま先が土の直前。', bat: '手元は耳の後ろ。', torso: '左肩が手前で壁を作る。' },
+      { id: 9, name: 'つま先接地 (タッチ)', foot: 'つま先接地。重心はまだ後ろ。', bat: 'グリップ先行の準備。', torso: '肩の開きを我慢。' },
+      { id: 10, name: '着地完了 (パワートップ)', foot: '前足が完全に固定される。', bat: '耳の後ろで最大割れ。', torso: '骨盤と肩の角度差が最大。' },
+      { id: 11, name: '骨盤回旋開始', foot: '後ろ足の膝が内側へ入り始める。', bat: 'グリップが少し下りる。', torso: '腰が先に回転開始。' },
+      { id: 12, name: 'バットラグ (タメ維持)', foot: '右足つま先で回転。', bat: 'ヘッドが遅れる（ラグ）。', torso: '胸が回り始める。' },
+      { id: 13, name: 'インサイドアウト進入', foot: '前足が踏ん張る。', bat: 'グリップが胸の前を通過。', torso: '胸が45度回転。' },
+      { id: 14, name: 'スイングプレーン水平進入', foot: '強固な前足の支柱。', bat: 'ヘッドが加速して追いつく。', torso: '胸が三塁側へ開く。' },
+      { id: 15, name: '白球到達 (ミート直前)', foot: '右足が蹴り足となる。', bat: 'ストライクゾーン水平。', torso: '視線は完全にボール。' },
+      { id: 16, name: 'ボールコンタクト直前', foot: '前足がガッチリロック。', bat: '芯の位置がドンピシャ。', torso: '軸が一切ブレない。' },
+      { id: 17, name: 'インパクト一閃！', foot: '前足で全エネルギーを受け止める。', bat: '水平インパクト、火花・スピード線。', torso: '体幹が正面（手前）を向く。' },
+      { id: 18, name: 'ボール射出・押し込み初動', foot: '前足1本で支える。', bat: 'ボールを押し込む。', torso: '手前へ前傾。' },
+      { id: 19, name: 'インパクト後の押し込み', foot: '前足ロック、後ろ足つま先立ち。', bat: '前へ突き出す。', torso: '体幹の回旋が続く。' },
+      { id: 20, name: '両腕フル伸展 (パワーエクステンション)', foot: '前足が地面を踏み締める。', bat: '投手方向へピンと伸びる。', torso: '胸が完全に三塁側へ開く。' },
+      { id: 21, name: 'リストターン (手首の返し)', foot: '後ろ足が完全に回転。', bat: 'バットが左へ振られる。', torso: '背中が見え始める。' },
+      { id: 22, name: 'バット巻き込み進入', foot: '体重100%前足へ。', bat: '左胸上へ弧を描く。', torso: '背中が捕手側へ向く。' },
+      { id: 23, name: '体幹フル回旋', foot: '前足1本立ち。', bat: '左肩の上へ上昇。', torso: '背番号が捕手側へ。' },
+      { id: 24, name: 'ハイフィニッシュ上昇', foot: '後ろ足の裏が後ろを向く。', bat: '左肩上へ巻き上がり。', torso: '回転の減速。' },
+      { id: 25, name: 'フルフィニッシュ完成', foot: '完璧なバランス。', bat: '左肩上にピタッと収まる。', torso: '背中が完全に捕手側。' },
+      { id: 26, name: '姿勢維持・バランスキープ', foot: '前足1本立ち。', bat: '左肩上で静止。', torso: '胸を張る。' },
+      { id: 27, name: '打球見送り', foot: 'バランス静止。', bat: '両手で優雅に保持。', torso: '視線はレフトスタンドへ。' }
+    ];
+
+    // Three.js シーン初期化
+    const threeContainer = document.getElementById('three-container');
+    const width = 280;
+    const height = 320;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f172a);
+
+    const camera = new THREE.PerspectiveCamera(22, width / height, 0.1, 100);
+    // 初期視点：TV中継センターカメラ視点（投手後方からホームベース方向）
+    // バッターは (0, 0, 0) 付近で向かい（-Z）を向いている
+    camera.position.set(0.2, 1.25, -4.5);
+    camera.lookAt(0.0, 0.95, 0.0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.toneMapping = THREE.NoToneMapping;
+    threeContainer.appendChild(renderer.domElement);
+
+    // ライティング
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+    hemiLight.position.set(0, 10, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    dirLight.position.set(3, 8, 4);
+    scene.add(dirLight);
+
+    // 打席のグラウンド床面
+    const groundGeo = new THREE.PlaneGeometry(3.5, 3.5);
+    const groundMat = new THREE.MeshBasicMaterial({ color: 0x1e293b, depthWrite: false });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
+    scene.add(ground);
+
+    // 3Dバッターの構築
+    const batter = create3DBatterRig({
+      capColor: 0x1e3a8a,
+      shirtColor: 0xf8fafc,
+      pantsColor: 0xf8fafc,
+      undershirtColor: 0x1e3a8a,
+      accentColor: 0x1e3a8a,
+      jerseyNumber: 4,
+      uniformPattern: 'ACCENT_LINE',
+      bats: 'R'
+    });
+    scene.add(batter.group);
+
+    // 元写真のロード
+    const refImg = new Image();
+    refImg.src = '/assets/batting_ref_27frames.png';
+
+    const photoCanvas = document.getElementById('photo-canvas');
+    const photoCtx = photoCanvas.getContext('2d');
+
+    const scrubber = document.getElementById('scrubber');
+    const indicator = document.getElementById('indicator');
+    const curF1 = document.getElementById('cur-f1');
+    const curF2 = document.getElementById('cur-f2');
+    const descName = document.getElementById('desc-name');
+    const descFoot = document.getElementById('desc-foot');
+    const descBat = document.getElementById('desc-bat');
+    const descTorso = document.getElementById('desc-torso');
+    const camLabel = document.getElementById('cam-label');
+
+    let currentFrame = 1;
+    let isPlaying = false;
+    let playTimer = null;
+
+    refImg.onload = () => {
+      setFrame(1);
+      renderAllCards();
+    };
+
+    function setFrame(fId) {
+      currentFrame = fId;
+      const pad = String(fId).padStart(2, '0');
+      curF1.innerText = pad;
+      curF2.innerText = pad;
+      indicator.innerText = `${pad} / 27`;
+      scrubber.value = fId;
+
+      const info = FRAMES_DATA[fId - 1];
+      descName.innerText = info.name;
+      descFoot.innerText = info.foot;
+      descBat.innerText = info.bat;
+      descTorso.innerText = info.torso;
+
+      // 1. 写真クロップ
+      const col = (fId - 1) % 9;
+      const row = Math.floor((fId - 1) / 9);
+      const cellW = 1018 / 9;
+      const cellH = 435 / 3;
+
+      photoCtx.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+      photoCtx.drawImage(
+        refImg,
+        col * cellW, row * cellH, cellW, cellH,
+        0, 0, photoCanvas.width, photoCanvas.height
+      );
+
+      // 2. 3Dモデルにフェーズ適用 (0〜26)
+      batter.setFrame(fId - 1);
+      renderer.render(scene, camera);
+    }
+
+    // カメラ切り替え
+    const btnCenter = document.getElementById('btn-cam-center');
+    const btnSide = document.getElementById('btn-cam-side');
+
+    btnCenter.onclick = () => {
+      btnCenter.classList.add('active');
+      btnSide.classList.remove('active');
+      camLabel.innerText = '（TV中継センター視点・投手後方）';
+      camera.position.set(0.2, 1.25, -4.5);
+      camera.lookAt(0.0, 0.95, 0.0);
+      renderer.render(scene, camera);
+    };
+
+    btnSide.onclick = () => {
+      btnSide.classList.add('active');
+      btnCenter.classList.remove('active');
+      camLabel.innerText = '（3塁側横アングル・写真と同一視点）';
+      camera.position.set(-4.2, 1.15, 0.0);
+      camera.lookAt(0.0, 0.95, 0.0);
+      renderer.render(scene, camera);
+    };
+
+    // 再生・スクラバー
+    scrubber.oninput = (e) => {
+      setFrame(parseInt(e.target.value, 10));
+    };
+
+    const playBtn = document.getElementById('play-btn');
+    playBtn.onclick = () => {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        playBtn.innerText = '⏸ 一時停止';
+        playTimer = setInterval(() => {
+          let next = currentFrame + 1;
+          if (next > 27) next = 1;
+          setFrame(next);
+        }, 1000 / 18);
+      } else {
+        playBtn.innerText = '▶ 再生 / 停止';
+        clearInterval(playTimer);
+      }
+    };
+
+    // カード一覧描画
+    function renderAllCards() {
+      const grid = document.getElementById('cards-grid');
+      grid.innerHTML = '';
+
+      FRAMES_DATA.forEach((f) => {
+        const card = document.createElement('div');
+        card.className = 'frame-card';
+        card.onclick = () => setFrame(f.id);
+
+        const pad = String(f.id).padStart(2, '0');
+        card.innerHTML = `
+          <div class="frame-header">
+            <span>コマ ${pad}：${f.name}</span>
+          </div>
+          <div style="text-align: center; margin-bottom: 6px;">
+            <canvas id="thumb-${f.id}" width="90" height="110" style="border: 1px solid #475569; border-radius: 4px;"></canvas>
+          </div>
+          <div style="font-size: 11px; color: #cbd5e1;">
+            <div><strong>足:</strong> ${f.foot}</div>
+            <div><strong>バット:</strong> ${f.bat}</div>
+          </div>
+        `;
+        grid.appendChild(card);
+
+        const c = document.getElementById(`thumb-${f.id}`);
+        const ctx = c.getContext('2d');
+        const col = (f.id - 1) % 9;
+        const row = Math.floor((f.id - 1) / 9);
+        const cellW = 1018 / 9;
+        const cellH = 435 / 3;
+        ctx.drawImage(refImg, col * cellW, row * cellH, cellW, cellH, 0, 0, c.width, c.height);
+      });
+    }
+
+    // 初回レンダリングループ
+    function animate() {
+      requestAnimationFrame(animate);
+      if (isPlaying) {
+        renderer.render(scene, camera);
+      }
+    }
+    animate();
+  </script>
+</body>
+</html>

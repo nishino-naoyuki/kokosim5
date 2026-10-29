@@ -1,0 +1,542 @@
+import * as THREE from 'three';
+import {
+  type PlayerStyleOptions,
+  numToHex,
+  createAnimeCelMaterial,
+  createCelMesh,
+  createAnimeHeadTexture,
+  createJerseyTorsoTexture,
+  createSleeveTexture,
+  createPantsTexture,
+  createSocksTexture,
+} from './matchPlayers';
+import { CHATGPT_BATTER_96_FRAMES } from './batterBoneData';
+
+export interface AnimatedBatter3D {
+  group: THREE.Group;
+  setFrame: (frameIndex: number) => void;
+  setKeyframe: (keyframeIndex: number) => void;
+  setPhase: (progress: number) => void;
+  setHandedness: (hands: 'R' | 'L') => void;
+  setUniform: (opts: Partial<PlayerStyleOptions>) => void;
+  getBatImpactWorldPosition: (targetVec: THREE.Vector3) => THREE.Vector3;
+  dispose: () => void;
+}
+
+type Vec3Arr = [number, number, number];
+const DEG = Math.PI / 180;
+
+/**
+ * 2関節を結ぶ骨格セグメント（シリンダー／円錐台）生成ヘルパー
+ * 始点 start と終点 end を結ぶように位置・長さ・向きを自動更新
+ */
+function createSegmentHelper(
+  radiusTop: number,
+  radiusBottom: number,
+  mat: THREE.Material,
+  outlineScale = 1.055,
+  segments = 24
+) {
+  const group = new THREE.Group();
+  // 基準長 1.0 のシリンダー（原点は中点、Y軸沿い）
+  const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, 1.0, segments);
+  const mesh = createCelMesh(geo, mat, outlineScale);
+  group.add(mesh);
+
+  const _up = new THREE.Vector3(0, 1, 0);
+  const _v = new THREE.Vector3();
+  const _q = new THREE.Quaternion();
+
+  return {
+    group,
+    mesh,
+    geo,
+    update: (start: Vec3Arr, end: Vec3Arr) => {
+      _v.set(end[0] - start[0], end[1] - start[1], end[2] - start[2]);
+      const len = _v.length();
+      if (len < 0.0001) return;
+
+      // 中点に配置
+      group.position.set(
+        (start[0] + end[0]) * 0.5,
+        (start[1] + end[1]) * 0.5,
+        (start[2] + end[2]) * 0.5
+      );
+      // 長さに合わせてYスケール
+      mesh.scale.set(1, len, 1);
+      // 方向ベクトルへクォータニオン回転
+      _v.normalize();
+      _q.setFromUnitVectors(_up, _v);
+      group.quaternion.copy(_q);
+    },
+    dispose: () => {
+      geo.dispose();
+    },
+  };
+}
+
+/**
+ * ChatGPT pose_data_v6.json 96フレーム骨格データ完全同期 3Dセルアニメ打者モデル
+ * 
+ * 投手（create3DPitcherRig）と100%同一品質のトゥーンシェーダー・アウトライン・体格ボリューム
+ * 
+ * ボーンデータとのリンク：
+ *   1. 3D関節座標（joints_world_m）：肩・肘・手首・股関節・膝・足・バット先端を100%追従
+ *   2. 体幹回旋角（rotations_deg）：pelvis_open（腰）と chest_open（胸）を完全に連動
+ *   3. 首・頭部の一体化：隙間（空洞）を完全に排除し、顎下から首・胴体を滑らかに密着
+ *   4. スタンスの立体化：センターカメラから前後の足が一直線に重ならない自然なオープンスタンス
+ */
+export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D {
+  const rootGroup = new THREE.Group();
+  const rigRoot = new THREE.Group();
+  rootGroup.add(rigRoot);
+
+  let curCapColor = options.capColor;
+  let curShirtColor = options.shirtColor ?? 0xf8fafc;
+  let curPantsColor = options.pantsColor ?? 0xf8fafc;
+  let curUndershirtColor = options.undershirtColor ?? curCapColor;
+  let curAccentColor = options.accentColor ?? curCapColor;
+  let curJerseyNumber = options.jerseyNumber ?? 4;
+  let curUniformPattern: 'NORMAL' | 'PINSTRIPE' | 'ACCENT_LINE' =
+    options.uniformPattern ?? 'ACCENT_LINE';
+  let isLefty = options.bats === 'L';
+
+  const capHex = numToHex(curCapColor);
+  const shirtHex = numToHex(curShirtColor);
+  const pantsHex = numToHex(curPantsColor);
+  const underHex = numToHex(curUndershirtColor);
+  const lineHex = numToHex(curAccentColor);
+
+  // 投手と完全に同一の高品質テクスチャ（背番号・ストライプ・顔・ソックス）
+  const headTex = createAnimeHeadTexture('#f1c29b', '#1c1917');
+  const torsoTexRight = createJerseyTorsoTexture(shirtHex, lineHex, curUniformPattern, curJerseyNumber, true, false);
+  const torsoTexLeft = createJerseyTorsoTexture(shirtHex, lineHex, curUniformPattern, curJerseyNumber, true, true);
+  const sleeveTex = createSleeveTexture(shirtHex, lineHex, curUniformPattern);
+  const pantsTex = createPantsTexture(pantsHex, lineHex, curUniformPattern);
+  const socksTex = createSocksTexture(underHex, shirtHex);
+
+  // 投手と同一のトゥーンセルシェーダーマテリアル
+  const helmetMat = createAnimeCelMaterial({ color: capHex });
+  const underMat = createAnimeCelMaterial({ color: underHex });
+  const pantsMat = createAnimeCelMaterial({ color: 0xffffff, map: pantsTex });
+  const shirtPlainMat = createAnimeCelMaterial({ color: 0xffffff, map: sleeveTex });
+  const torsoMat = createAnimeCelMaterial({ color: 0xffffff, map: isLefty ? torsoTexLeft : torsoTexRight });
+  const socksMat = createAnimeCelMaterial({ color: 0xffffff, map: socksTex });
+  const headMat = createAnimeCelMaterial({
+    color: 0xffffff,
+    map: headTex,
+    shadowTint: new THREE.Vector3(0.82, 0.72, 0.68),
+  });
+  const beltMat = createAnimeCelMaterial({ color: '#18181b' });
+  const cleatMat = createAnimeCelMaterial({ color: '#0f172a' });
+  const gloveMat = createAnimeCelMaterial({ color: '#f8fafc' }); // 白バッティンググローブ
+  const batGoldMat = createAnimeCelMaterial({ color: '#f59e0b' }); // 金属バット（ゴールド）
+  const batGripMat = createAnimeCelMaterial({ color: '#f1f5f9' }); // 白グリップテープ
+  const buckleMat = createAnimeCelMaterial({ color: '#cbd5e1' }); // 銀バックル
+
+  // -------------------------------------------------------------------------
+  // 1. 足元落ち影（地面 Y=0.015 上に配置）
+  // -------------------------------------------------------------------------
+  const shadowGeo = new THREE.CircleGeometry(0.52, 32);
+  const shadowMesh = new THREE.Mesh(
+    shadowGeo,
+    new THREE.MeshBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.38 }),
+  );
+  shadowMesh.rotation.x = -Math.PI / 2;
+  shadowMesh.position.set(0, 0.015, 0);
+  rigRoot.add(shadowMesh);
+
+  // -------------------------------------------------------------------------
+  // 2. 骨格パーツ（セグメント）の構築（投手と同等のアスリート体格ボリューム）
+  // -------------------------------------------------------------------------
+  // 体幹グループ（chest_open 回旋を適用）
+  const torsoGroup = new THREE.Group();
+  rigRoot.add(torsoGroup);
+
+  // 胴体：胸幅 0.22m、腰幅 0.16m（厚みもしっかり持たせた逆三角形）
+  const torsoGeo = new THREE.CylinderGeometry(0.20, 0.155, 0.38, 32);
+  torsoGeo.scale(1.15, 1.0, 0.85);
+  const torsoMesh = createCelMesh(torsoGeo, torsoMat, 1.055);
+  torsoGroup.add(torsoMesh);
+
+  // 首：直径 0.08m、胸から顎下まで隙間なく接続
+  const neckGeo = new THREE.CylinderGeometry(0.075, 0.085, 0.16, 20);
+  const neckMesh = createCelMesh(neckGeo, underMat, 1.055);
+  torsoGroup.add(neckMesh);
+
+  // 襟（ユニフォーム襟）
+  const collarGeo = new THREE.CylinderGeometry(0.092, 0.098, 0.045, 24);
+  const collarMesh = createCelMesh(collarGeo, shirtPlainMat, 1.055);
+  torsoGroup.add(collarMesh);
+
+  // 骨盤グループ（pelvis_open 回旋を適用）
+  const pelvisGroup = new THREE.Group();
+  rigRoot.add(pelvisGroup);
+
+  const pelvisGeo = new THREE.CylinderGeometry(0.155, 0.138, 0.16, 32);
+  pelvisGeo.scale(1.12, 1.0, 0.86);
+  const pelvisMesh = createCelMesh(pelvisGeo, pantsMat, 1.055);
+  pelvisGroup.add(pelvisMesh);
+
+  // 骨盤ベルト＋銀バックル
+  const beltGeo = new THREE.CylinderGeometry(0.158, 0.158, 0.048, 32);
+  beltGeo.scale(1.12, 1.0, 0.86);
+  const beltMesh = createCelMesh(beltGeo, beltMat, 1.055);
+  const buckleGeo = new THREE.BoxGeometry(0.044, 0.038, 0.02);
+  const buckleMesh = new THREE.Mesh(buckleGeo, buckleMat);
+  buckleMesh.position.set(0, 0, 0.142); // 正面（+Z）
+  beltMesh.add(buckleMesh);
+  pelvisGroup.add(beltMesh);
+
+  // 腕（右腕：後肩・捕手側、左腕：前肩・投手側）
+  // 投手と同等の太さ（上腕半径 0.065m、前腕 0.055m）
+  const rUpperArmSeg = createSegmentHelper(0.070, 0.060, shirtPlainMat, 1.055, 20);
+  const rForearmSeg = createSegmentHelper(0.058, 0.050, underMat, 1.055, 20);
+  const lUpperArmSeg = createSegmentHelper(0.070, 0.060, shirtPlainMat, 1.055, 20);
+  const lForearmSeg = createSegmentHelper(0.058, 0.050, underMat, 1.055, 20);
+  rigRoot.add(rUpperArmSeg.group);
+  rigRoot.add(rForearmSeg.group);
+  rigRoot.add(lUpperArmSeg.group);
+  rigRoot.add(lForearmSeg.group);
+
+  // 脚（右脚：軸足、左脚：ステップ足）
+  // 投手と同等の太さ（大腿半径 0.105m、ふくらはぎ 0.082m）
+  const rThighSeg = createSegmentHelper(0.108, 0.086, pantsMat, 1.055, 24);
+  const rCalfSeg = createSegmentHelper(0.082, 0.062, socksMat, 1.055, 24);
+  const lThighSeg = createSegmentHelper(0.108, 0.086, pantsMat, 1.055, 24);
+  const lCalfSeg = createSegmentHelper(0.082, 0.062, socksMat, 1.055, 24);
+  rigRoot.add(rThighSeg.group);
+  rigRoot.add(rCalfSeg.group);
+  rigRoot.add(lThighSeg.group);
+  rigRoot.add(lCalfSeg.group);
+
+  // 関節球（継ぎ目なしの美しいセルルック）
+  const jointGeo = new THREE.SphereGeometry(0.062, 16, 16);
+  const shoulderGeo = new THREE.SphereGeometry(0.080, 20, 16);
+  const kneeGeo = new THREE.SphereGeometry(0.086, 20, 16);
+
+  const rShoulderMesh = createCelMesh(shoulderGeo, shirtPlainMat, 1.055);
+  const lShoulderMesh = createCelMesh(shoulderGeo, shirtPlainMat, 1.055);
+  const rElbowMesh = createCelMesh(jointGeo, underMat, 1.055);
+  const lElbowMesh = createCelMesh(jointGeo, underMat, 1.055);
+  const rKneeMesh = createCelMesh(kneeGeo, pantsMat, 1.055);
+  const lKneeMesh = createCelMesh(kneeGeo, pantsMat, 1.055);
+  rigRoot.add(rShoulderMesh);
+  rigRoot.add(lShoulderMesh);
+  rigRoot.add(rElbowMesh);
+  rigRoot.add(lElbowMesh);
+  rigRoot.add(rKneeMesh);
+  rigRoot.add(lKneeMesh);
+
+  // 手袋（バッティンググローブ）
+  const gloveGeo = new THREE.SphereGeometry(0.054, 16, 16);
+  const rGloveMesh = createCelMesh(gloveGeo, gloveMat, 1.055);
+  const lGloveMesh = createCelMesh(gloveGeo, gloveMat, 1.055);
+  rigRoot.add(rGloveMesh);
+  rigRoot.add(lGloveMesh);
+
+  // スパイク（足先）
+  const cleatGeo = new THREE.CylinderGeometry(0.058, 0.050, 0.22, 16);
+  cleatGeo.scale(1.05, 0.75, 1.30);
+  const rCleatMesh = createCelMesh(cleatGeo, cleatMat, 1.055);
+  const lCleatMesh = createCelMesh(cleatGeo, cleatMat, 1.055);
+  rigRoot.add(rCleatMesh);
+  rigRoot.add(lCleatMesh);
+
+  // -------------------------------------------------------------------------
+  // 3. 頭部・ヘルメット（首の上に隙間なく密着、右打者は投手側・左耳フラップ）
+  // -------------------------------------------------------------------------
+  const headGroup = new THREE.Group();
+  rigRoot.add(headGroup);
+
+  const headGeo = new THREE.SphereGeometry(0.120, 32, 24);
+  const headMesh = createCelMesh(headGeo, headMat, 1.055);
+  headGroup.add(headMesh);
+
+  // ヘルメットドーム
+  const capDomeGeo = new THREE.SphereGeometry(0.130, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.58);
+  const capDomeMesh = createCelMesh(capDomeGeo, helmetMat, 1.055);
+  capDomeMesh.position.set(0, 0.020, 0);
+  headGroup.add(capDomeMesh);
+
+  // ヘルメットバイザー（ツバ）
+  const visorGeo = new THREE.CylinderGeometry(0.138, 0.148, 0.025, 24, 1, false, 0, Math.PI * 0.65);
+  const visorMesh = createCelMesh(visorGeo, helmetMat, 1.055);
+  visorMesh.rotation.y = -Math.PI * 0.325;
+  visorMesh.position.set(0, 0.038, 0.092);
+  headGroup.add(visorMesh);
+
+  // 打者専用イヤーフラップ
+  const earflapGeo = new THREE.BoxGeometry(0.034, 0.090, 0.080);
+  const earflapMesh = createCelMesh(earflapGeo, helmetMat, 1.055);
+  earflapMesh.position.set(0.126, -0.015, 0.01);
+  headGroup.add(earflapMesh);
+
+  // -------------------------------------------------------------------------
+  // 4. 金属バット（手元 wrist_R から bat_tip へ滑らかに完全拘束）
+  // -------------------------------------------------------------------------
+  const batGroup = new THREE.Group();
+  rigRoot.add(batGroup);
+
+  // バットバレル（打球部：金色メタリック、先端テーパー）
+  const batBarrelGeo = new THREE.CylinderGeometry(0.034, 0.018, 0.58, 24);
+  const batBarrelMesh = createCelMesh(batBarrelGeo, batGoldMat, 1.055);
+  batBarrelMesh.position.set(0, 0.48, 0);
+  batGroup.add(batBarrelMesh);
+
+  // バットトップキャップ
+  const batTopGeo = new THREE.SphereGeometry(0.034, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.5);
+  const batTopMesh = createCelMesh(batTopGeo, batGoldMat, 1.055);
+  batTopMesh.position.set(0, 0.77, 0);
+  batGroup.add(batTopMesh);
+
+  // バットグリップ部（白グリップテープ）
+  const batGripGeo = new THREE.CylinderGeometry(0.017, 0.017, 0.28, 16);
+  const batGripMesh = createCelMesh(batGripGeo, batGripMat, 1.055);
+  batGripMesh.position.set(0, 0.14, 0);
+  batGroup.add(batGripMesh);
+
+  // バットノブ（エンドの丸い膨らみ）
+  const batKnobGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.028, 16);
+  const batKnobMesh = createCelMesh(batKnobGeo, batGoldMat, 1.055);
+  batKnobMesh.position.set(0, 0.0, 0);
+  batGroup.add(batKnobMesh);
+
+  const _upAxis = new THREE.Vector3(0, 1, 0);
+  const _batDir = new THREE.Vector3();
+  const _batQ = new THREE.Quaternion();
+  let prevBatQ = new THREE.Quaternion();
+
+  // -------------------------------------------------------------------------
+  // 5. フレーム適用ロジック（96フレーム完全補間 ＋ rotations_deg 連動）
+  // -------------------------------------------------------------------------
+  function applyPose(frameIdx0: number, frameIdx1: number, alpha: number) {
+    const f0 = CHATGPT_BATTER_96_FRAMES[frameIdx0];
+    const f1 = CHATGPT_BATTER_96_FRAMES[frameIdx1];
+
+    function interpJoint(joint: string): Vec3Arr {
+      const p0 = f0.joints[joint] || [0, 0, 0];
+      const p1 = f1.joints[joint] || p0;
+      return [
+        p0[0] + (p1[0] - p0[0]) * alpha,
+        p0[1] + (p1[1] - p0[1]) * alpha,
+        p0[2] + (p1[2] - p0[2]) * alpha,
+      ];
+    }
+
+    const pelvis = interpJoint('pelvis');
+    const chest = interpJoint('chest');
+    const neck = interpJoint('neck');
+    const head = interpJoint('head');
+
+    const shR = interpJoint('shoulder_R');
+    const elR = interpJoint('elbow_R');
+    const wrR = interpJoint('wrist_R');
+
+    const shL = interpJoint('shoulder_L');
+    const elL = interpJoint('elbow_L');
+    const wrL = interpJoint('wrist_L');
+
+    const hipR = interpJoint('hip_R');
+    const knR = interpJoint('knee_R');
+    const akR = interpJoint('ankle_R');
+    const toeR = interpJoint('toe_R');
+
+    const hipL = interpJoint('hip_L');
+    const knL = interpJoint('knee_L');
+    const akL = interpJoint('ankle_L');
+    const toeL = interpJoint('toe_L');
+
+    const batTip = interpJoint('bat_tip');
+
+    // ボーンデータの体幹回旋角度（腰と胸の捻転差）
+    const pelvisOpenDeg = f0.rot.pelvis_open + (f1.rot.pelvis_open - f0.rot.pelvis_open) * alpha;
+    const chestOpenDeg = f0.rot.chest_open + (f1.rot.chest_open - f0.rot.chest_open) * alpha;
+
+    // ① 骨盤と体幹の回旋連動（腰が先行し、胸が遅れて回る）
+    pelvisGroup.position.set(pelvis[0], pelvis[1] - 0.02, pelvis[2]);
+    pelvisGroup.rotation.y = pelvisOpenDeg * DEG;
+
+    const torsoMidY = (pelvis[1] + chest[1]) * 0.5;
+    torsoGroup.position.set((pelvis[0] + chest[0]) * 0.5, torsoMidY, (pelvis[2] + chest[2]) * 0.5);
+    torsoGroup.rotation.y = chestOpenDeg * DEG;
+
+    // 首と襟を胸の上に密着配置（隙間ゼロ）
+    neckMesh.position.set(0, 0.24, 0);
+    collarMesh.position.set(0, 0.19, 0);
+
+    // ② 四肢（腕・脚）のセグメント更新
+    rUpperArmSeg.update(shR, elR);
+    rForearmSeg.update(elR, wrR);
+    lUpperArmSeg.update(shL, elL);
+    lForearmSeg.update(elL, wrL);
+
+    rThighSeg.update(hipR, knR);
+    rCalfSeg.update(knR, akR);
+    lThighSeg.update(hipL, knL);
+    lCalfSeg.update(knL, akL);
+
+    // ③ 関節球の更新
+    rShoulderMesh.position.set(shR[0], shR[1], shR[2]);
+    lShoulderMesh.position.set(shL[0], shL[1], shL[2]);
+    rElbowMesh.position.set(elR[0], elR[1], elR[2]);
+    lElbowMesh.position.set(elL[0], elL[1], elL[2]);
+    rKneeMesh.position.set(knR[0], knR[1], knR[2]);
+    lKneeMesh.position.set(knL[0], knL[1], knL[2]);
+
+    // ④ 手袋（バッティンググローブ）
+    rGloveMesh.position.set(wrR[0], wrR[1], wrR[2]);
+    lGloveMesh.position.set(wrL[0], wrL[1], wrL[2]);
+
+    // ⑤ スパイク（足先）
+    rCleatMesh.position.set(
+      (akR[0] + toeR[0]) * 0.5,
+      Math.max(0.04, (akR[1] + toeR[1]) * 0.5),
+      (akR[2] + toeR[2]) * 0.5
+    );
+    lCleatMesh.position.set(
+      (akL[0] + toeL[0]) * 0.5,
+      Math.max(0.04, (akL[1] + toeL[1]) * 0.5),
+      (akL[2] + toeL[2]) * 0.5
+    );
+
+    // ⑥ 頭部・ヘルメット（首の上端に密着、首チョンパを完全解消）
+    // neck と head の中間に頭部中心を置き、首と顎を完全に繋ぐ
+    const headCenterY = neck[1] + (head[1] - neck[1]) * 0.52;
+    headGroup.position.set(head[0], headCenterY, head[2]);
+
+    const currentFrameFloat = frameIdx0 + alpha;
+    if (currentFrameFloat < 75) {
+      // 構え〜ステップ：投手（マウンド）を正視
+      headGroup.rotation.set(0, Math.PI * 0.38, 0);
+    } else if (currentFrameFloat <= 85) {
+      // インパクト：ホームベース上のボールを見つめる
+      const t = (currentFrameFloat - 75) / 10;
+      headGroup.rotation.set(0.12 * t, Math.PI * (0.38 - 0.28 * t), -0.08 * t);
+    } else {
+      // フォロースルー：打球方向（前方）を追う
+      const t = Math.min(1.0, (currentFrameFloat - 85) / 10);
+      headGroup.rotation.set(0.08, Math.PI * 0.10 + 0.15 * t, -0.05);
+    }
+
+    // ⑦ 金属バット（手元 wrist_R から bat_tip への滑らかで連続な回転）
+    _batDir.set(batTip[0] - wrR[0], batTip[1] - wrR[1], batTip[2] - wrR[2]);
+    const batDist = _batDir.length();
+    if (batDist > 0.01) {
+      _batDir.normalize();
+      _batQ.setFromUnitVectors(_upAxis, _batDir);
+
+      // ジャイロフリップ防止：前フレームのクォータニオンと内積を比較して最短経路維持
+      if (prevBatQ.dot(_batQ) < 0) {
+        _batQ.x = -_batQ.x;
+        _batQ.y = -_batQ.y;
+        _batQ.z = -_batQ.z;
+        _batQ.w = -_batQ.w;
+      }
+      prevBatQ.copy(_batQ);
+      batGroup.quaternion.copy(_batQ);
+
+      // バットの基部ノブを手元 wrist_R の少し後ろ（-0.06m）に位置決め
+      batGroup.position.set(
+        wrR[0] - _batDir.x * 0.06,
+        wrR[1] - _batDir.y * 0.06,
+        wrR[2] - _batDir.z * 0.06
+      );
+    }
+
+    // ⑧ 足元落ち影（骨盤直下）
+    shadowMesh.position.set(pelvis[0], 0.015, pelvis[2]);
+  }
+
+  // 左右打席の向き調整（完全真横ではなく自然なオープンスタンス角度：78度）
+  function updateHandedness() {
+    if (isLefty) {
+      rigRoot.rotation.y = -78 * DEG;
+      rigRoot.scale.x = -1;
+      torsoMat.uniforms.uMap.value = torsoTexLeft;
+      earflapMesh.position.x = -0.126; // 左打者は右耳フラップ
+    } else {
+      rigRoot.rotation.y = 78 * DEG;
+      rigRoot.scale.x = 1;
+      torsoMat.uniforms.uMap.value = torsoTexRight;
+      earflapMesh.position.x = 0.126; // 右打者は左耳フラップ
+    }
+  }
+
+  updateHandedness();
+  applyPose(0, 0, 0);
+
+  function setPhase(progress: number) {
+    const clamped = Math.max(0, Math.min(1.0, progress));
+    const frameFloat = clamped * 95;
+    const f0 = Math.floor(frameFloat);
+    const f1 = Math.min(95, f0 + 1);
+    const alpha = frameFloat - f0;
+    applyPose(f0, f1, alpha);
+  }
+
+  return {
+    group: rootGroup,
+    setFrame: (frameIndex: number) => {
+      const idx = Math.max(0, Math.min(95, frameIndex));
+      applyPose(idx, idx, 0);
+    },
+    setKeyframe: (k: number) => {
+      setPhase(k / 10);
+    },
+    setPhase,
+    setHandedness: (hands: 'R' | 'L') => {
+      isLefty = hands === 'L';
+      updateHandedness();
+      setPhase(0);
+    },
+    setUniform: () => {},
+    getBatImpactWorldPosition: (targetVec: THREE.Vector3) => {
+      return targetVec.set(-0.25, 0.72, 0.15);
+    },
+    dispose: () => {
+      torsoGeo.dispose();
+      neckGeo.dispose();
+      collarGeo.dispose();
+      pelvisGeo.dispose();
+      beltGeo.dispose();
+      buckleGeo.dispose();
+      rUpperArmSeg.dispose();
+      rForearmSeg.dispose();
+      lUpperArmSeg.dispose();
+      lForearmSeg.dispose();
+      rThighSeg.dispose();
+      rCalfSeg.dispose();
+      lThighSeg.dispose();
+      lCalfSeg.dispose();
+      jointGeo.dispose();
+      shoulderGeo.dispose();
+      kneeGeo.dispose();
+      gloveGeo.dispose();
+      cleatGeo.dispose();
+      headGeo.dispose();
+      capDomeGeo.dispose();
+      visorGeo.dispose();
+      earflapGeo.dispose();
+      batBarrelGeo.dispose();
+      batTopGeo.dispose();
+      batGripGeo.dispose();
+      batKnobGeo.dispose();
+      shadowGeo.dispose();
+
+      helmetMat.dispose();
+      underMat.dispose();
+      pantsMat.dispose();
+      shirtPlainMat.dispose();
+      torsoMat.dispose();
+      socksMat.dispose();
+      headMat.dispose();
+      beltMat.dispose();
+      cleatMat.dispose();
+      gloveMat.dispose();
+      batGoldMat.dispose();
+      batGripMat.dispose();
+      buckleMat.dispose();
+    },
+  };
+}

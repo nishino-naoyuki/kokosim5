@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>KokoSim 5 - 選手詳細ポップアップモックアップ</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .gauge-fill {
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased p-4 min-h-screen flex items-center justify-center font-sans">
+
+  <!-- 背景：薄暗い選手一覧テーブル風オーバーレイ -->
+  <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-0"></div>
+
+  <!-- メインモーダルウィンドウ -->
+  <div class="relative z-10 w-full max-w-5xl bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    
+    <!-- モーダルヘッダー -->
+    <div class="bg-gradient-to-r from-slate-800 via-indigo-950 to-slate-800 px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <span class="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-md text-sm font-bold tracking-wider">背番号 #2</span>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-black text-white tracking-wide">柘山 隆太</h1>
+            <span class="text-slate-300 text-sm font-medium">（3年・捕手）</span>
+            <span class="bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs px-2.5 py-0.5 rounded-full font-bold">右投右打</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">
+            守備適性: <span class="text-amber-400 font-bold">メイン: 捕手</span> | サブ: 一塁 <span class="text-emerald-400">○</span> / 外野 <span class="text-yellow-400">△</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- 調子インジケーター (-5 〜 +5) -->
+      <div class="flex items-center gap-3 bg-slate-800/80 border border-slate-700 px-4 py-2 rounded-xl">
+        <div class="text-right">
+          <div class="text-[11px] text-slate-400 uppercase font-semibold">Condition</div>
+          <div class="text-sm font-bold text-amber-300 flex items-center gap-1.5 justify-end">
+            <span>絶好調</span>
+            <span class="text-base font-black text-amber-400">+4</span>
+          </div>
+        </div>
+        <div class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-lg">
+          😄
+        </div>
+      </div>
+    </div>
+
+    <!-- モーダルメインコンテンツ -->
+    <div class="p-6 grid grid-cols-12 gap-6 overflow-y-auto max-h-[80vh]">
+      
+      <!-- 左カラム：立ち絵 ＆ 特性（Traits） -->
+      <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+        <!-- 立ち絵カード -->
+        <div class="bg-gradient-to-b from-slate-800/60 to-slate-900/90 border border-slate-700/60 rounded-xl p-2 flex flex-col items-center relative overflow-hidden shadow-lg">
+          <div class="w-full h-80 rounded-lg bg-slate-950/40 border border-slate-700/50 flex items-center justify-center relative overflow-hidden">
+            <!-- 捕手切り抜きイラスト -->
+            <img src="./catcher_portrait.jpg" alt="柘山 隆太" class="w-full h-full object-contain drop-shadow-md">
+            <div class="absolute bottom-2 left-2 right-2 bg-slate-950/85 backdrop-blur-sm border border-slate-700/80 px-3 py-1.5 rounded-lg flex justify-between items-center text-xs">
+              <span class="text-slate-300 font-medium">正捕手</span>
+              <span class="text-amber-400 font-bold">強肩強打</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 特性（能力値以外の特性・プレイスタイル） -->
+        <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              習得特性（プレイスタイル）
+            </h3>
+            <span class="text-[11px] text-slate-400">4件</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div class="group relative bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 text-xs px-2.5 py-1 rounded-md font-semibold cursor-help transition-all">
+              ⚡ フライボールバッター
+              <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block w-48 bg-slate-950 border border-slate-700 text-slate-200 text-[11px] p-2 rounded shadow-lg z-20">
+                打球角度が上がりやすく、長打や本塁打が出やすいスイング軌道。
+              </div>
+            </div>
+            <div class="group relative bg-blue-950/60 hover:bg-blue-900/80 border border-blue-500/40 text-blue-300 text-xs px-2.5 py-1 rounded-md font-semibold cursor-help transition-all">
+              🛡️ キャッチャー◎
+              <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block w-48 bg-slate-950 border border-slate-700 text-slate-200 text-[11px] p-2 rounded shadow-lg z-20">
+                投手の消費スタミナ-15%、コントロール+8。リードで失点を防ぐ。
+              </div>
+            </div>
+            <div class="group relative bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-500/40 text-indigo-300 text-xs px-2.5 py-1 rounded-md font-semibold cursor-help transition-all">
+              🎯 強肩
+              <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block w-48 bg-slate-950 border border-slate-700 text-slate-200 text-[11px] p-2 rounded shadow-lg z-20">
+                二塁送球・遠投時のボールの勢いが減衰しにくく盗塁を刺しやすい。
+              </div>
+            </div>
+            <div class="group relative bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 text-amber-300 text-xs px-2.5 py-1 rounded-md font-semibold cursor-help transition-all">
+              🔥 サヨナラ男
+              <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block w-48 bg-slate-950 border border-slate-700 text-slate-200 text-[11px] p-2 rounded shadow-lg z-20">
+                サヨナラのチャンス時にミート力・長打力が一時的に+10上昇。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右カラム：パラメータ全13種（MAX 100） ＆ 成績3区分 -->
+      <div class="col-span-12 lg:col-span-8 flex flex-col gap-5">
+        
+        <!-- 能力値グリッド（すべてMAX 100） -->
+        <div class="bg-slate-800/40 border border-slate-800 rounded-xl p-5">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-700/60 pb-2">
+            <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-sm bg-indigo-500"></span>
+              選手能力ステータス <span class="text-xs text-slate-400 font-normal">（全項目 MAX 100）</span>
+            </h2>
+            <div class="text-[11px] text-slate-400 flex items-center gap-3">
+              <span>S: 90~100</span>
+              <span>A: 80~89</span>
+              <span>B: 70~79</span>
+              <span>C: 60~69</span>
+              <span>D: 50~59</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+            
+            <!-- 打撃・走力系 -->
+            <div class="space-y-3">
+              <div class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                <span>打撃・走塁</span>
+                <span class="text-[10px] text-slate-500 font-normal">※加速は内部隠し値(76)</span>
+              </div>
+              
+              <!-- 長打力 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">長打力 <span class="text-[11px] text-slate-400 font-normal">(打球初速・スイング速度)</span></span>
+                  <span class="font-bold text-amber-400">88 <span class="text-xs text-slate-400 font-normal">/ 100</span> (A)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full gauge-fill" style="width: 88%"></div>
+                </div>
+              </div>
+
+              <!-- ミート力 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">ミート力 <span class="text-[11px] text-slate-400 font-normal">(当てる能力)</span></span>
+                  <span class="font-bold text-amber-400">82 <span class="text-xs text-slate-400 font-normal">/ 100</span> (A)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full gauge-fill" style="width: 82%"></div>
+                </div>
+              </div>
+
+              <!-- 選球眼 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">選球眼 <span class="text-[11px] text-slate-400 font-normal">(見極め・四球率)</span></span>
+                  <span class="font-bold text-blue-400">78 <span class="text-xs text-slate-400 font-normal">/ 100</span> (B)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full gauge-fill" style="width: 78%"></div>
+                </div>
+              </div>
+
+              <!-- 走力 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">走力 <span class="text-[11px] text-slate-400 font-normal">(トップスピード)</span></span>
+                  <span class="font-bold text-blue-400">72 <span class="text-xs text-slate-400 font-normal">/ 100</span> (B)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full gauge-fill" style="width: 72%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 守備・精神系 -->
+            <div class="space-y-3">
+              <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider">守備・精神・送球</div>
+
+              <!-- 捕球力 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">捕球力 <span class="text-[11px] text-slate-400 font-normal">(守備力・捕球)</span></span>
+                  <span class="font-bold text-amber-400">85 <span class="text-xs text-slate-400 font-normal">/ 100</span> (A)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full gauge-fill" style="width: 85%"></div>
+                </div>
+              </div>
+
+              <!-- 反応速度 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">反応速度 <span class="text-[11px] text-slate-400 font-normal">(打球への初動速度)</span></span>
+                  <span class="font-bold text-amber-400">80 <span class="text-xs text-slate-400 font-normal">/ 100</span> (A)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-teal-500 to-cyan-400 rounded-full gauge-fill" style="width: 80%"></div>
+                </div>
+              </div>
+
+              <!-- 肩の強さ -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">肩の強さ <span class="text-[11px] text-slate-400 font-normal">(送球速・球速ベース)</span></span>
+                  <span class="font-bold text-red-400 font-black">94 <span class="text-xs text-slate-400 font-normal">/ 100</span> (S)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full gauge-fill" style="width: 94%"></div>
+                </div>
+              </div>
+
+              <!-- コントロール -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">コントロール <span class="text-[11px] text-slate-400 font-normal">(送球正確性/制球)</span></span>
+                  <span class="font-bold text-slate-200">54 <span class="text-xs text-slate-400 font-normal">/ 100</span> (D)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-slate-500 to-indigo-400 rounded-full gauge-fill" style="width: 54%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 判断力 ＆ 度胸 -->
+            <div class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-700/40">
+              <!-- 判断力 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">判断力 <span class="text-[11px] text-slate-400 font-normal">(状況判断・走塁/送球先)</span></span>
+                  <span class="font-bold text-amber-400">86 <span class="text-xs text-slate-400 font-normal">/ 100</span> (A)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full gauge-fill" style="width: 86%"></div>
+                </div>
+              </div>
+
+              <!-- 度胸 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300 font-medium">度胸 <span class="text-[11px] text-slate-400 font-normal">(プレッシャー耐性・実戦で上昇)</span></span>
+                  <span class="font-bold text-blue-400">75 <span class="text-xs text-slate-400 font-normal">/ 100</span> (B)</span>
+                </div>
+                <div class="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full gauge-fill" style="width: 75%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 投手パラメータ（投球フォーム ＆ 変化球配列） -->
+            <div class="col-span-1 md:col-span-2 bg-slate-900/60 border border-slate-800 rounded-lg p-3 mt-1 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3">
+                <span class="text-slate-400 font-semibold">投球フォーム:</span>
+                <span class="font-bold text-slate-200">60 <span class="text-[11px] text-slate-500">/ 100 (肩94×フォーム60 → 最高球速 146km/h)</span></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400 font-semibold">変化球 (キレ):</span>
+                <span class="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-indigo-300 font-medium">スライダー: 74</span>
+                <span class="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-indigo-300 font-medium">フォーク: 80</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 打撃成績（3区分：通算 / 公式戦 / 全国大会） -->
+        <div class="bg-slate-800/40 border border-slate-800 rounded-xl p-5">
+          <div class="flex items-center justify-between mb-3 border-b border-slate-700/60 pb-2">
+            <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-sm bg-amber-500"></span>
+              打撃成績
+            </h2>
+
+            <!-- タブセレクター -->
+            <div class="flex bg-slate-900/80 p-0.5 rounded-lg border border-slate-700/70 text-xs">
+              <button onclick="switchTab('career')" id="tab-career" class="px-3 py-1 rounded-md font-bold transition-all bg-indigo-600 text-white shadow-sm">通算成績</button>
+              <button onclick="switchTab('official')" id="tab-official" class="px-3 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition-all">公式戦成績</button>
+              <button onclick="switchTab('national')" id="tab-national" class="px-3 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition-all">全国大会成績</button>
+            </div>
+          </div>
+
+          <!-- 成績データテーブル -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-center text-xs">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-700/40">
+                  <th class="py-2 text-left font-medium">成績区分</th>
+                  <th class="py-2 font-medium">打率</th>
+                  <th class="py-2 font-medium">試合</th>
+                  <th class="py-2 font-medium">打数</th>
+                  <th class="py-2 font-medium">安打</th>
+                  <th class="py-2 font-medium text-amber-300 font-bold">本塁打</th>
+                  <th class="py-2 font-medium text-amber-300 font-bold">打点</th>
+                  <th class="py-2 font-medium">三振</th>
+                  <th class="py-2 font-medium">四球</th>
+                  <th class="py-2 font-medium">盗塁</th>
+                  <th class="py-2 font-medium">出塁率</th>
+                  <th class="py-2 font-medium font-bold text-indigo-300">OPS</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 font-semibold" id="stats-body">
+                <!-- JavaScriptで動的更新または全表示 -->
+                <tr class="hover:bg-slate-700/20 text-slate-200" id="row-career">
+                  <td class="py-2.5 text-left text-indigo-300 font-bold">通算成績 (練習＋公式)</td>
+                  <td class="text-amber-400 text-sm font-black">.352</td>
+                  <td>42</td>
+                  <td>142</td>
+                  <td>50</td>
+                  <td class="text-amber-300 font-bold">14</td>
+                  <td class="text-amber-300 font-bold">48</td>
+                  <td>18</td>
+                  <td>22</td>
+                  <td>6</td>
+                  <td>.439</td>
+                  <td class="text-indigo-300 font-bold">1.085</td>
+                </tr>
+                <tr class="hover:bg-slate-700/20 text-slate-200" id="row-official">
+                  <td class="py-2.5 text-left text-emerald-300 font-bold">公式戦成績 (地区・県)</td>
+                  <td class="text-amber-400 text-sm font-black">.368</td>
+                  <td>18</td>
+                  <td>68</td>
+                  <td>25</td>
+                  <td class="text-amber-300 font-bold">6</td>
+                  <td class="text-amber-300 font-bold">22</td>
+                  <td>7</td>
+                  <td>11</td>
+                  <td>3</td>
+                  <td>.456</td>
+                  <td class="text-indigo-300 font-bold">1.110</td>
+                </tr>
+                <tr class="hover:bg-slate-700/20 text-slate-200" id="row-national">
+                  <td class="py-2.5 text-left text-amber-300 font-bold">全国大会成績 (甲子園)</td>
+                  <td class="text-amber-400 text-sm font-black">.400</td>
+                  <td>5</td>
+                  <td>20</td>
+                  <td>8</td>
+                  <td class="text-amber-300 font-bold">2</td>
+                  <td class="text-amber-300 font-bold">7</td>
+                  <td>2</td>
+                  <td>4</td>
+                  <td>1</td>
+                  <td>.500</td>
+                  <td class="text-indigo-300 font-bold">1.250</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- モーダルフッター -->
+    <div class="bg-slate-950 px-6 py-3 border-t border-slate-800 flex justify-between items-center text-xs">
+      <div class="text-slate-400">
+        ショートカット: <kbd class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-300 font-mono">←</kbd> 前の選手 / <kbd class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-300 font-mono">→</kbd> 次の選手
+      </div>
+      <div class="flex gap-3">
+        <button class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-1.5 rounded-lg font-bold transition-all">背番号変更</button>
+        <button class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-1.5 rounded-lg font-bold shadow-sm transition-all">個別練習を指示</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(type) {
+      const tabs = ['career', 'official', 'national'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        const row = document.getElementById('row-' + t);
+        if (t === type) {
+          btn.className = "px-3 py-1 rounded-md font-bold transition-all bg-indigo-600 text-white shadow-sm";
+          row.className = "bg-indigo-950/30 text-white font-bold border-l-2 border-indigo-400";
+        } else {
+          btn.className = "px-3 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition-all";
+          row.className = "hover:bg-slate-700/20 text-slate-300 font-normal";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

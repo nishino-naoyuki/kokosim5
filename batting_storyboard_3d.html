@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>⚾ KokoSim 5 3Dボーン打撃原画シート（TV中継正面視点・11コマ完全版）</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #334155;
+    }
+    h1 { font-size: 20px; color: #fbbf24; }
+    .subtitle { color: #94a3b8; font-size: 13px; margin-top: 4px; }
+    .btn-group { display: flex; gap: 8px; }
+    .btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn-cam { background: #334155; }
+    .btn-cam.active { background: #0284c7; }
+
+    /* メイン比較・検証エリア */
+    .hero-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 900px) {
+      .hero-panel { grid-template-columns: 1fr; }
+    }
+    .hero-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .badge-front { background: #0284c7; color: #fff; }
+    .badge-side { background: #ea580c; color: #fff; }
+
+    .canvas-box {
+      width: 100%;
+      height: 420px;
+      background: #eee8dc;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .canvas-box canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
+    /* 再生・スクラバー */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+    .scrubber { flex: 1; height: 8px; cursor: pointer; }
+    .frame-indicator { font-weight: bold; font-size: 14px; color: #38bdf8; min-width: 80px; }
+
+    /* 11コマ原画グリッドシート（2段構成） */
+    .sheet-section {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .section-header {
+      font-size: 15px;
+      font-weight: bold;
+      color: #38bdf8;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .grid-row-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #94a3b8;
+      margin: 10px 0 6px 0;
+      padding-left: 6px;
+      border-left: 3px solid #38bdf8;
+    }
+    .grid-row-6 {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .grid-row-5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 1024px) {
+      .grid-row-6 { grid-template-columns: repeat(3, 1fr); }
+      .grid-row-5 { grid-template-columns: repeat(3, 1fr); }
+    }
+    .cell-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .cell-card:hover { border-color: #38bdf8; transform: translateY(-2px); }
+    .cell-card.active { border-color: #fbbf24; box-shadow: 0 0 0 1px #fbbf24; }
+    .cell-header {
+      font-size: 11px;
+      font-weight: bold;
+      color: #fbbf24;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cell-canvas-wrap {
+      width: 100%;
+      height: 220px;
+      background: #eee8dc;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .cell-canvas-wrap canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+    .cell-desc {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 4px;
+      line-height: 1.3;
+      height: 28px;
+      overflow: hidden;
+    }
+
+    /* エクスポート用マスターキャンバス（不可視） */
+    #export-canvas { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <div>
+      <h1>⚾ KokoSim 5 3Dボーン打撃原画シート（TV中継正面視点・11コマ完全版）</h1>
+      <div class="subtitle">
+        岡本和真選手の連続写真（上段6コマ・下段5コマ）の骨格姿勢を3Dボーンに完全移植し、坂本勇人選手の正面インパクト写真（Photo 3）の画角から直接レンダリング
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-cam active" id="btn-cam-front">⚾ TV中継正面（投手視点・写真3）</button>
+      <button class="btn btn-cam" id="btn-cam-side">📷 横アングル（写真1 岡本選手視点）</button>
+      <button class="btn" id="btn-save-sheet">📸 原画シート画像を書き出す</button>
+    </div>
+  </div>
+
+  <!-- 1. メイン連動ビューアー -->
+  <div class="hero-panel">
+    <!-- 左：TV中継正面視点（センターカメラ・投手視点・写真3合致） -->
+    <div class="hero-card">
+      <div class="card-title">
+        <span><span class="badge badge-front">正面視点</span> TV中継センターカメラ（投手 ➜ 打者）</span>
+        <span style="font-size: 12px; color: #38bdf8;" id="label-cur-front">＜1＞ セット構え</span>
+      </div>
+      <div class="canvas-box" id="box-front"></div>
+    </div>
+
+    <!-- 右：3塁側横視点（元写真1・岡本選手と完全比較） -->
+    <div class="hero-card">
+      <div class="card-title">
+        <span><span class="badge badge-side">横視点（検証用）</span> 真横アングル（岡本選手写真準拠）</span>
+        <span style="font-size: 12px; color: #fbbf24;" id="label-cur-side">＜1＞ セット構え</span>
+      </div>
+      <div class="canvas-box" id="box-side"></div>
+    </div>
+  </div>
+
+  <!-- コントロールバー -->
+  <div class="controls">
+    <button class="btn" id="btn-play">▶ 再生 / 停止</button>
+    <input type="range" class="scrubber" id="scrubber" min="0" max="10" value="0">
+    <div class="frame-indicator" id="indicator">＜1＞ / 11</div>
+    <div style="flex: 2; font-size: 12px; color: #cbd5e1;" id="detail-desc">
+      両膝をしっかり曲げた低重心パワーポジション。左肩越しに投手を睨み据え、バットは角度65°で右耳後ろに保持。
+    </div>
+  </div>
+
+  <!-- 2. 全11コマ原画グリッドシート（2段構成） -->
+  <div class="sheet-section" id="sheet-section">
+    <div class="section-header">
+      <span>📑 【原画シート全11コマ】3Dボーン投影グリッド（クリックで指定コマへ移動）</span>
+      <span style="font-size: 12px; color: #94a3b8;">※上段6コマ・下段5コマの構成</span>
+    </div>
+
+    <div class="grid-row-title">上段：構え 〜 タメ 〜 足上げ 〜 並進ステップ 〜 接地進入（＜1＞〜＜6＞）</div>
+    <div class="grid-row-6" id="row-top"></div>
+
+    <div class="grid-row-title">下段：着地・パワートップ 〜 バットラグ 〜 インパクト一閃 〜 両腕フル伸展 〜 ハイフィニッシュ（＜7＞〜＜11＞）</div>
+    <div class="grid-row-5" id="row-bottom"></div>
+  </div>
+
+  <canvas id="export-canvas" width="1800" height="1100"></canvas>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { create3DBatterRig, BATTING_POSES_11 } from '/src/render/batterRig.ts';
+
+    const KEYFRAMES_META = [
+      { id: 1, name: '＜1＞ セット構え', eng: 'Stance', desc: '膝を深く曲げた低重心パワーポジション。左肩越しに投手を直視。' },
+      { id: 2, name: '＜2＞ 始動・脱力', eng: 'Pre-load', desc: '呼吸を合わせた重心の微細な沈み込みと脱力。' },
+      { id: 3, name: '＜3＞ 軸足タメ', eng: 'Deep Load', desc: '右股関節へ体重85%をタメ、左踵が浮く（ヒールアップ）。' },
+      { id: 4, name: '＜4＞ 足上げ頂点', eng: 'Leg Lift', desc: '左膝を腰高さまで力強く引き上げ、軸足1本でタメを保持。' },
+      { id: 5, name: '＜5＞ ステップ並進', eng: 'Stride', desc: '前足（左足）が投手方向へ前進！頭・手元は後ろに残る。' },
+      { id: 6, name: '＜6＞ 接地態勢', eng: 'Landing', desc: '左足爪先が土寸前。手元は耳の後ろで深いタメ。' },
+      { id: 7, name: '＜7＞ パワートップ', eng: 'Power Top', desc: '前足がガッチリ接地！骨盤と肩の捻転差が最大化（最大の割れ）。' },
+      { id: 8, name: '＜8＞ 骨盤回旋', eng: 'Bat Lag', desc: '骨盤が正面へ先行回転。グリップ先行でバットが水平に遅れる。' },
+      { id: 9, name: '＜9＞ インパクト！', eng: 'Impact', desc: '【写真3完全合致】胸が正面を向き、バットが白球を芯で粉砕！' },
+      { id: 10, name: '＜10＞ 両腕伸展', eng: 'Extension', desc: '両腕が投手方向へ真っ直ぐピンと伸びる豪快な押し込み！' },
+      { id: 11, name: '＜11＞ フィニッシュ', eng: 'High Finish', desc: 'バットが左肩上へ高く巻き上がり、打球を見送るハイフィニッシュ。' }
+    ];
+
+    const boxFront = document.getElementById('box-front');
+    const boxSide = document.getElementById('box-side');
+
+    function createSceneWithBatter() {
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xeee8dc);
+
+      const amb = new THREE.AmbientLight(0xffffff, 0.85);
+      const dir1 = new THREE.DirectionalLight(0xffffff, 0.95);
+      dir1.position.set(-2.5, 4.0, 3.0);
+      const dir2 = new THREE.DirectionalLight(0xffeedd, 0.55);
+      dir2.position.set(2.5, 2.0, -3.0);
+      scene.add(amb, dir1, dir2);
+
+      // 地面
+      const groundGeo = new THREE.PlaneGeometry(3, 3);
+      const groundMat = new THREE.MeshBasicMaterial({ color: 0xdfd8ca });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = 0.001;
+      scene.add(ground);
+
+      // ホームベース
+      const baseGeo = new THREE.BoxGeometry(0.42, 0.015, 0.42);
+      const baseMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+      baseMesh.position.set(0, 0.008, 0.35);
+      scene.add(baseMesh);
+
+      // バッターリグ生成
+      const batter = create3DBatterRig({
+        capColor: 0x1e3a8a,
+        shirtColor: 0xf8fafc,
+        pantsColor: 0xf8fafc,
+        undershirtColor: 0x1e3a8a,
+        accentColor: 0x1e3a8a,
+        jerseyNumber: 4,
+        uniformPattern: 'ACCENT_LINE',
+        bats: 'R'
+      });
+      scene.add(batter.group);
+
+      return { scene, batter };
+    }
+
+    // カメラ設定（しっかりキャラクターが中央に大きく収まるズームイン画角）
+    // 正面視点：投手(-X)から打者を見る
+    function createCamFront(aspect) {
+      const cam = new THREE.PerspectiveCamera(26, aspect, 0.1, 50);
+      cam.position.set(-2.6, 0.92, 0.18);
+      cam.lookAt(-0.05, 0.88, 0.0);
+      return cam;
+    }
+
+    // 横視点：正面(+Z)から打者の胸を見る（写真1 岡本選手準拠）
+    function createCamSide(aspect) {
+      const cam = new THREE.PerspectiveCamera(26, aspect, 0.1, 50);
+      cam.position.set(-0.05, 0.92, 2.6);
+      cam.lookAt(-0.05, 0.88, 0.0);
+      return cam;
+    }
+
+    // メインシーン
+    const mainFront = createSceneWithBatter();
+    const mainSide = createSceneWithBatter();
+
+    const camMainFront = createCamFront(boxFront.clientWidth / boxFront.clientHeight);
+    const camMainSide = createCamSide(boxSide.clientWidth / boxSide.clientHeight);
+
+    const renMainFront = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renMainFront.setSize(boxFront.clientWidth, boxFront.clientHeight);
+    renMainFront.setPixelRatio(window.devicePixelRatio || 1);
+    boxFront.appendChild(renMainFront.domElement);
+
+    const renMainSide = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renMainSide.setSize(boxSide.clientWidth, boxSide.clientHeight);
+    renMainSide.setPixelRatio(window.devicePixelRatio || 1);
+    boxSide.appendChild(renMainSide.domElement);
+
+    // インパクト白球（コマ9用）
+    const ballGeo = new THREE.SphereGeometry(0.045, 16, 16);
+    const ballMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const impactBallFront = new THREE.Mesh(ballGeo, ballMat);
+    impactBallFront.position.set(-0.02, 0.86, 0.18);
+    impactBallFront.visible = false;
+    mainFront.scene.add(impactBallFront);
+
+    const impactBallSide = new THREE.Mesh(ballGeo, ballMat);
+    impactBallSide.position.set(-0.02, 0.86, 0.18);
+    impactBallSide.visible = false;
+    mainSide.scene.add(impactBallSide);
+
+    // 2. 11コマのグリッドカード生成
+    const rowTop = document.getElementById('row-top');
+    const rowBottom = document.getElementById('row-bottom');
+    const cellItems = [];
+
+    let currentCameraMode = 'FRONT'; // 'FRONT' or 'SIDE'
+
+    KEYFRAMES_META.forEach((k, idx) => {
+      const card = document.createElement('div');
+      card.className = 'cell-card' + (idx === 0 ? ' active' : '');
+      card.id = `card-${idx}`;
+      card.innerHTML = `
+        <div class="cell-header">${k.name}</div>
+        <div class="cell-canvas-wrap" id="wrap-${idx}"></div>
+        <div class="cell-desc">${k.desc}</div>
+      `;
+
+      if (idx < 6) rowTop.appendChild(card);
+      else rowBottom.appendChild(card);
+
+      const wrap = card.querySelector(`#wrap-${idx}`);
+      const ren = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      ren.setSize(240, 220);
+      ren.setPixelRatio(window.devicePixelRatio || 1);
+      wrap.appendChild(ren.domElement);
+
+      const { scene, batter } = createSceneWithBatter();
+      batter.setKeyframe(idx);
+
+      // コマ9には白球を配置
+      if (idx === 8) {
+        const b = new THREE.Mesh(ballGeo, ballMat);
+        b.position.set(-0.02, 0.86, 0.18);
+        scene.add(b);
+      }
+
+      cellItems.push({ ren, scene, batter, idx });
+
+      card.addEventListener('click', () => {
+        setMainFrame(idx);
+      });
+    });
+
+    const cellAspect = 240 / 220;
+    const camCellFront = createCamFront(cellAspect);
+    const camCellSide = createCamSide(cellAspect);
+
+    function renderAllCells() {
+      const cam = currentCameraMode === 'FRONT' ? camCellFront : camCellSide;
+      cellItems.forEach(({ ren, scene }) => {
+        ren.render(scene, cam);
+      });
+    }
+
+    // 3. メインフレーム更新
+    let curFrameIdx = 0;
+    function setMainFrame(idx) {
+      curFrameIdx = idx;
+
+      mainFront.batter.setKeyframe(idx);
+      mainSide.batter.setKeyframe(idx);
+
+      impactBallFront.visible = (idx === 8);
+      impactBallSide.visible = (idx === 8);
+
+      renMainFront.render(mainFront.scene, camMainFront);
+      renMainSide.render(mainSide.scene, camMainSide);
+
+      document.querySelectorAll('.cell-card').forEach((c, i) => {
+        c.classList.toggle('active', i === idx);
+      });
+
+      document.getElementById('scrubber').value = idx;
+      document.getElementById('indicator').textContent = `＜${idx + 1}＞ / 11`;
+      document.getElementById('label-cur-front').textContent = KEYFRAMES_META[idx].name;
+      document.getElementById('label-cur-side').textContent = KEYFRAMES_META[idx].name;
+      document.getElementById('detail-desc').textContent = KEYFRAMES_META[idx].desc;
+    }
+
+    setMainFrame(0);
+    renderAllCells();
+
+    // 4. アニメーションループ再生
+    let isPlaying = false;
+    let playTimer = null;
+    const btnPlay = document.getElementById('btn-play');
+    btnPlay.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      btnPlay.textContent = isPlaying ? '⏸ 停止' : '▶ 再生';
+      if (isPlaying) {
+        playLoop();
+      } else {
+        clearTimeout(playTimer);
+      }
+    });
+
+    function playLoop() {
+      if (!isPlaying) return;
+      curFrameIdx = (curFrameIdx + 1) % 11;
+      setMainFrame(curFrameIdx);
+      let delay = 180;
+      if (curFrameIdx === 3 || curFrameIdx === 6) delay = 260; // タメ
+      if (curFrameIdx >= 7 && curFrameIdx <= 9) delay = 90; // スイング・インパクト一閃
+      if (curFrameIdx === 10) delay = 500; // フィニッシュ
+
+      playTimer = setTimeout(playLoop, delay);
+    }
+
+    document.getElementById('scrubber').addEventListener('input', (e) => {
+      if (isPlaying) {
+        isPlaying = false;
+        btnPlay.textContent = '▶ 再生';
+        clearTimeout(playTimer);
+      }
+      setMainFrame(parseInt(e.target.value, 10));
+    });
+
+    // カメラ切替
+    const btnCamFront = document.getElementById('btn-cam-front');
+    const btnCamSide = document.getElementById('btn-cam-side');
+
+    btnCamFront.addEventListener('click', () => {
+      currentCameraMode = 'FRONT';
+      btnCamFront.classList.add('active');
+      btnCamSide.classList.remove('active');
+      renderAllCells();
+    });
+
+    btnCamSide.addEventListener('click', () => {
+      currentCameraMode = 'SIDE';
+      btnCamSide.classList.add('active');
+      btnCamFront.classList.remove('active');
+      renderAllCells();
+    });
+
+    // 5. 11コマ原画シート画像の一括合成エクスポート
+    window.renderMasterSheetToDataURL = function() {
+      const expCanvas = document.getElementById('export-canvas');
+      const ctx = expCanvas.getContext('2d');
+      const W = 1800;
+      const H = 1100;
+
+      // 背景
+      ctx.fillStyle = '#eee8dc';
+      ctx.fillRect(0, 0, W, H);
+
+      // タイトルヘッダー
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('【3Dボーン投影原画シート】打者 バッティングモーション連続11キーフレーム（TV中継正面視点）', 40, 48);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('※岡本和真選手（11コマ連続写真）の生体力学骨格を完全移植し、坂本勇人選手（Photo 3）の正面カメラ画角から直接レンダリング', 40, 74);
+
+      // 上段タイトル
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('▼ 上段：構え 〜 タメ 〜 足上げ 〜 並進ステップ 〜 接地進入（＜1＞〜＜6＞）', 40, 115);
+
+      // 上段 6体描画
+      const cardW = 265;
+      const cardH = 380;
+      const startY1 = 130;
+      for (let i = 0; i < 6; i++) {
+        const x = 40 + i * (cardW + 24);
+        const y = startY1;
+
+        // 背景カード枠
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.fillRect(x, y, cardW, cardH);
+        ctx.strokeRect(x, y, cardW, cardH);
+
+        // 3Dレンダリング結果を描画
+        const srcCanvas = cellItems[i].ren.domElement;
+        ctx.drawImage(srcCanvas, x + 5, y + 36, cardW - 10, 260);
+
+        // ラベルヘッダー
+        ctx.fillStyle = '#1e3a8a';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText(KEYFRAMES_META[i].name, x + 12, y + 24);
+
+        // 英語ラベル
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(KEYFRAMES_META[i].eng, x + 12, y + 310);
+
+        // 解説
+        ctx.fillStyle = '#334155';
+        ctx.font = '11px sans-serif';
+        const desc = KEYFRAMES_META[i].desc;
+        ctx.fillText(desc.substring(0, 18), x + 12, y + 334);
+        if (desc.length > 18) {
+          ctx.fillText(desc.substring(18, 36), x + 12, y + 352);
+        }
+      }
+
+      // 下段タイトル
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('▼ 下段：着地完了・パワートップ 〜 バットラグ 〜 インパクト一閃！ 〜 両腕フル伸展 〜 ハイフィニッシュ（＜7＞〜＜11＞）', 40, 565);
+
+      // 下段 5体描画
+      const cardW5 = 320;
+      const startY2 = 585;
+      for (let i = 6; i < 11; i++) {
+        const idx5 = i - 6;
+        const x = 40 + idx5 * (cardW5 + 24);
+        const y = startY2;
+
+        ctx.fillStyle = (i === 8) ? '#fffbeb' : '#f8fafc'; // インパクトは強調
+        ctx.strokeStyle = (i === 8) ? '#f59e0b' : '#cbd5e1';
+        ctx.lineWidth = (i === 8) ? 3 : 2;
+        ctx.fillRect(x, y, cardW5, cardH);
+        ctx.strokeRect(x, y, cardW5, cardH);
+
+        const srcCanvas = cellItems[i].ren.domElement;
+        ctx.drawImage(srcCanvas, x + 5, y + 36, cardW5 - 10, 260);
+
+        ctx.fillStyle = (i === 8) ? '#b45309' : '#1e3a8a';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText(KEYFRAMES_META[i].name + (i === 8 ? ' ⭐写真3完全合致' : ''), x + 12, y + 24);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(KEYFRAMES_META[i].eng, x + 12, y + 310);
+
+        ctx.fillStyle = '#334155';
+        ctx.font = '11px sans-serif';
+        const desc = KEYFRAMES_META[i].desc;
+        ctx.fillText(desc.substring(0, 22), x + 12, y + 334);
+        if (desc.length > 22) {
+          ctx.fillText(desc.substring(22, 44), x + 12, y + 352);
+        }
+      }
+
+      // コピーライト・出力情報
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('高校野球シミュレーション5 (KokoSim 5) - 3D Rig Keyframe Projection Output', 40, 1020);
+
+      return expCanvas.toDataURL('image/png');
+    };
+
+    document.getElementById('btn-save-sheet').addEventListener('click', () => {
+      const dataUrl = window.renderMasterSheetToDataURL();
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'batting_front_11keyframes_3d.png';
+      a.click();
+    });
+
+    window.isPageReady = true;
+  </script>
+</body>
+</html>
