@@ -4,7 +4,7 @@ import { Rng } from '../../core/rng';
 import type { Player } from '../../core/types';
 import { game, touch } from '../../game/state';
 import { renderAvatarSvg } from '../../render/avatarSvg';
-import { initMatch3D, type CameraViewMode, type Match3DScene } from '../../render/match3d';
+import { initMatch3D, type CameraViewMode, type Match3DScene, isRealisticPitchEasingActive, setRealisticPitchEasing } from '../../render/match3d';
 import type { PitchingFormType } from '../../render/matchPlayers';
 import { choosePracticeStadium, type StadiumSpec } from '../../render/stadium';
 import {
@@ -1077,6 +1077,21 @@ export function renderMatchScreen(): string {
           </button>
           <button data-act="set-dev-tab" data-tab="EFFECTS_TEST" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'EFFECTS_TEST' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'EFFECTS_TEST' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'EFFECTS_TEST' ? '#fff' : '#94a3b8'};cursor:pointer">
             ✨ 演出テスト
+          </button>
+        </div>
+
+        <!-- 投球モーション緩急（生体力学リアル化）切替トグル（安全弁） -->
+        <div style="background:${isRealisticPitchEasingActive ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)'};border:1.5px solid ${isRealisticPitchEasingActive ? '#10b981' : '#64748b'};padding:6px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;flex-direction:column">
+            <span style="font-size:10.5px;font-weight:800;color:${isRealisticPitchEasingActive ? '#6ee7b7' : '#cbd5e1'}">
+              🎬 投球緩急: ${isRealisticPitchEasingActive ? '生体力学リアル緩急 (タメ・加速)' : '従来の等速直線 (旧仕様)'}
+            </span>
+            <span style="font-size:8.5px;color:#94a3b8">
+              ${isRealisticPitchEasingActive ? '足上げ静止タメ ➜ 重力加速 ➜ 腕のしなり ➜ 爆発的リリース急加速' : '滑らかな等速補間。NG時はいつでもこのボタンで復元できます'}
+            </span>
+          </div>
+          <button data-act="toggle-pitch-easing" style="padding:4px 9px;border-radius:5px;font-size:10px;font-weight:800;border:1px solid ${isRealisticPitchEasingActive ? '#10b981' : '#94a3b8'};background:${isRealisticPitchEasingActive ? '#059669' : '#334155'};color:#fff;cursor:pointer;white-space:nowrap">
+            ${isRealisticPitchEasingActive ? '✓ リアル有効中 (旧仕様に戻す)' : '🔄 旧仕様有効中 (リアルに切替)'}
           </button>
         </div>
 
@@ -2204,6 +2219,20 @@ registerActions({
     if (isFormEditorOpen) {
       syncDevPitcherToLiveMatch();
     }
+    requestRender();
+  },
+
+  'toggle-pitch-easing': () => {
+    const nextState = !isRealisticPitchEasingActive;
+    setRealisticPitchEasing(nextState);
+    if (match3d) {
+      match3d.setRealisticPitchEasing(nextState);
+    }
+    toast(
+      nextState
+        ? '🎬 投球モーションを「生体力学リアル緩急」に設定しました'
+        : '🔄 投球モーションを「従来の等速直線（旧仕様）」に戻しました'
+    );
     requestRender();
   },
 

@@ -56,6 +56,8 @@ export interface Match3DScene {
     onComplete?: () => void,
     onImpact?: (outcome: PitchOutcome) => void
   ) => void;
+  setRealisticPitchEasing: (enabled: boolean) => void;
+  isRealisticPitchEasing: () => boolean;
   dispose: () => void;
   resize: () => void;
 }
@@ -564,6 +566,73 @@ function buildBaseballField(stadiumSpec: StadiumSpec): THREE.Group {
   return g;
 }
 
+// ===========================================================================
+// 投球モーションの生体力学（バイオメカニクス）緩急イージング
+// - 0.00 〜 0.46: ワインドアップ・足上げ〜頂点タメ（スムーズに立ち上がり、頂点でフワッと静止）
+// - 0.46 〜 0.76: ヒップファーストの重心移動・前足ステップ（重力加速）
+// - 0.76 〜 0.90: 前足着地〜胸の張り・腕の強烈なしなり（レイトコッキング）
+// - 0.90 〜 1.00: 蓄積エネルギー爆発！一瞬で前方へ腕を振り抜く超加速リリース！
+// ===========================================================================
+
+/** リアル投球緩急の有効化フラグ（NG時に即座に旧線形動作へ戻せる安全弁） */
+export let isRealisticPitchEasingActive = true;
+
+export function setRealisticPitchEasing(enabled: boolean): void {
+  isRealisticPitchEasingActive = enabled;
+}
+
+export function calcBiomechanicsWindupPhase(u: number): number {
+  const t = Math.max(0, Math.min(1, u));
+  if (t <= 0.46) {
+    // 足上げ〜頂点タメ: 0.00 -> 0.25 (頂点付近の角速度がゼロに近づくタメ)
+    const s = t / 0.46;
+    const ease = Math.sin((s * Math.PI) / 2);
+    return 0.25 * ease;
+  } else if (t <= 0.76) {
+    // ステップ・重心移動: 0.25 -> 0.52 (前方に重力加速しながら沈み込む)
+    const s = (t - 0.46) / 0.30;
+    const ease = s * s * (3 - 2 * s);
+    return 0.25 + 0.27 * ease;
+  } else if (t <= 0.90) {
+    // 着地〜腕のしなり（レイトコッキング）: 0.52 -> 0.62
+    const s = (t - 0.76) / 0.14;
+    return 0.52 + 0.10 * s;
+  } else {
+    // 腕の振り〜リリース一閃！: 0.62 -> 0.68 (爆発的超加速スナップ)
+    const s = (t - 0.90) / 0.10;
+    const ease = Math.pow(s, 2.2);
+    return 0.62 + 0.06 * ease;
+  }
+}
+
+export function calcBiomechanicsFollowThroughPhase(p: number): number {
+  const t = Math.max(0, Math.min(1, p));
+  if (t <= 0.35) {
+    // 放球直後の鋭い腕の振り抜き: 0.68 -> 0.88
+    const s = t / 0.35;
+    const ease = 1 - Math.pow(1 - s, 2.0);
+    return 0.68 + 0.20 * ease;
+  } else {
+    // 減速フィニッシュ: 0.88 -> 1.00
+    const s = (t - 0.35) / 0.65;
+    const ease = Math.sin((s * Math.PI) / 2);
+    return 0.88 + 0.12 * ease;
+  }
+}
+
+// フォームエディタプレビュー用（全0.0〜1.0）
+export function calcFullPitchSequencePhase(p: number): number {
+  const t = Math.max(0, Math.min(1, p));
+  const splitT = 0.58; // 0.00〜0.58がワインドアップ、0.58〜1.00がフォロースルー
+  if (t <= splitT) {
+    const u = t / splitT;
+    return calcBiomechanicsWindupPhase(u);
+  } else {
+    const v = (t - splitT) / (1 - splitT);
+    return calcBiomechanicsFollowThroughPhase(v);
+  }
+}
+
 /**
  * 3D試合ビューの初期化
  */
@@ -790,12 +859,15 @@ export function initMatch3D(
 
     function loop(now: number) {
       const elapsed = now - startTime;
-      const p = Math.min(1.0, elapsed / totalDurationMs);
-      pitcher.setPhase(p);
+      const progress = Math.min(1.0, elapsed / totalDurationMs);
+      const effectivePhase = isRealisticPitchEasingActive
+        ? calcFullPitchSequencePhase(progress)
+        : progress;
+      pitcher.setPhase(effectivePhase);
       if (onPhaseUpdate) {
-        onPhaseUpdate(p, getStageLabelForPhase(p));
+        onPhaseUpdate(effectivePhase, getStageLabelForPhase(effectivePhase));
       }
-      if (p < 1.0) {
+      if (progress < 1.0) {
         currentTweenId = requestAnimationFrame(loop);
       } else {
         currentTweenId = null;
@@ -887,9 +959,12 @@ export function initMatch3D(
       // 1. 投手のワインドアップフェーズ (0 <= elapsed < windupDurationMs)
       // -------------------------------------------------------------
       if (elapsed < windupDurationMs) {
-        // 投手：0.00 (①構え) -> 0.68 (⑪放球) まで滑らかに補間
+        // 投手：0.00 (①構え) -> 0.68 (⑪放球) まで生体力学緩急または線形補間
         const windupProgress = Math.min(1.0, elapsed / windupDurationMs);
-        pitcher.setPhase(windupProgress * 0.68);
+        const pitchPhase = isRealisticPitchEasingActive
+          ? calcBiomechanicsWindupPhase(windupProgress)
+          : windupProgress * 0.68;
+        pitcher.setPhase(pitchPhase);
         ball.visible = false;
 
         // 打者：投手の足上げと完全に同調し、軸足にタメてすり足でトップ姿勢へ（Frame 0 ➜ Frame 41: phase 0.00 ➔ 0.4316）
@@ -908,8 +983,11 @@ export function initMatch3D(
       const progress = Math.min(1.0, flightElapsed / flightDurationMs);
       const curT = progress * realFlightSec;
 
-      // 投手：⑪放球(0.68) ➜ ⑭フォロースルー(0.88) ➜ ⑮フィニッシュ(1.00) まで連続補間
-      pitcher.setPhase(0.68 + progress * 0.32);
+      // 投手：⑪放球(0.68) ➜ ⑭フォロースルー(0.88) ➜ ⑮フィニッシュ(1.00) まで生体力学緩急または線形補間
+      const followPhase = isRealisticPitchEasingActive
+        ? calcBiomechanicsFollowThroughPhase(progress)
+        : 0.68 + progress * 0.32;
+      pitcher.setPhase(followPhase);
 
       // ボール：src/core/pitch.ts の真の物理演算（重力＋マグヌス効果＋球種変化曲線）
       ball.visible = true;
@@ -1148,6 +1226,8 @@ export function initMatch3D(
     playContinuousFormPreview,
     playPitchAnimation,
     playDemoPitch,
+    setRealisticPitchEasing,
+    isRealisticPitchEasing: () => isRealisticPitchEasingActive,
     dispose,
     resize,
   };
