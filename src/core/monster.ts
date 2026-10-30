@@ -43,10 +43,14 @@ export function applyMonster(player: Player, kind: MonsterKind, rng: Rng): void 
   const base = (lo: number, hi: number) => rng.float(lo, hi);
 
   if (kind === 'PITCHER') {
-    // 目標球速 150〜155km/h（怪童 +5 を含む）→ 素の球速 145〜150km/h になるよう肩を逆算
+    // 目標球速 150〜155km/h（怪童 +5 を含む）→ 素の球速 145〜150km/h になるよう肩・フォームを設定
+    // 新球速式: V = 100 + 35x + 30x^2, 30x^2 + 35x + (100 - targetV) = 0
     const targetV = rng.float(150, 155) - 5;
-    const form = rng.float(78, 90);
-    const arm = clamp((targetV - 105 - 0.31 * form) / 0.24, 70, 100);
+    const form = rng.float(80, 88);
+    // 2次方程式の解: x = (-35 + sqrt(35^2 - 4 * 30 * (100 - targetV))) / 60
+    const targetX = (-35 + Math.sqrt(1225 + 120 * (targetV - 100))) / 60;
+    // targetX = (0.55 * arm + 0.45 * form) / 100
+    const arm = clamp((targetX * 100 - 0.45 * form) / 0.55, 70, 95);
     a.arm = arm;
     a.form = form;
     a.control = base(75, 82);

@@ -51,10 +51,9 @@ describe('pitchVelocity', () => {
     expect(pitchVelocity(94, 60)).toBeGreaterThan(144);
     expect(pitchVelocity(94, 60)).toBeLessThan(148);
   });
-  it('平均的な新入生は125km/h前後', () => {
-    const v = pitchVelocity(40, 35);
-    expect(v).toBeGreaterThan(120);
-    expect(v).toBeLessThan(132);
+  it('平均的な新入生（能力50）は125km/h前後', () => {
+    const v = pitchVelocity(50, 50);
+    expect(v).toBeCloseTo(125, 0);
   });
   it('怪童は +5km/h', () => {
     expect(pitchVelocity(80, 80, ['怪童']) - pitchVelocity(80, 80)).toBeCloseTo(5);

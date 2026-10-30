@@ -254,8 +254,9 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
   );
 
   // コース判定（ストライクゾーン vs ボールゾーン）
+  // 高校野球の平均打者相手に、5回で ctrl=0で約10四球、ctrl=50で約3.5四球、ctrl=100で約1.5四球となるバランス
   const ctrl = pitcher.abilities.control;
-  const strikeProbability = clamp(0.55 + (ctrl - 50) * 0.003 - (1 - staminaRatio) * 0.15, 0.4, 0.72);
+  const strikeProbability = clamp(0.53 + (ctrl - 50) * 0.0022 - (1 - staminaRatio) * 0.14, 0.36, 0.63);
   const inStrikeZone = rng.chance(strikeProbability);
   const zone: TrackingStats['pitchZone'] = inStrikeZone
     ? rng.pick(['CENTER', 'HIGH_IN', 'HIGH_OUT', 'LOW_IN', 'LOW_OUT'])
@@ -301,9 +302,27 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
   }
 
   // -------------------------------------------------------------------------
-  // スイング判断
+  // スイング判断（打者の選球眼 × 投手の制球力 × カウント進行）
   // -------------------------------------------------------------------------
-  let swingProb = inStrikeZone ? 0.68 : 0.28;
+  const batterEye = batter.abilities.eye ?? 50;
+  // コントロールが高いほどボール球がゾーン際どいコースに外れ、低いほど大きく外れる
+  const ballSharpness = (ctrl - 50) * 0.0012;
+  // 打者の選球眼（eye）が良いほどボール球に手を出さず、悪い（悪球打ち）ほど振ってしまう
+  const eyeFactor = (50 - batterEye) * 0.0030;
+  // カウントに応じた選球補正（3ボール時は見極め、2ストライク時はカット・警戒）
+  const countBallSwingBonus = count.balls === 3 ? -0.12 : count.strikes === 2 ? 0.10 : 0;
+  const baseBallSwingProb = clamp(0.20 + ballSharpness + eyeFactor + countBallSwingBonus, 0.04, 0.40);
+
+  let swingProb = inStrikeZone
+    ? clamp(
+        0.66 +
+          (batterEye - 50) * 0.002 +
+          (count.strikes === 2 ? 0.12 : 0) -
+          (count.balls === 3 && count.strikes === 0 ? 0.35 : 0),
+        0.30,
+        0.90,
+      )
+    : baseBallSwingProb;
   const tactic = state.offenseTactic;
 
   if (tactic === 'PATIENCE') {
@@ -336,9 +355,9 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
       // デッドボール（死球）判定
       // 制球力（ctrl: 0〜100）が低いほど、またスタミナ切れ・不調時にすっぽ抜けが発生
       const deadBallProb = clamp(
-        0.003 + (50 - ctrl) * 0.00012 + (1 - staminaRatio) * 0.0025 - pitcher.condition * 0.0003,
+        0.0035 + (50 - ctrl) * 0.00025 + (1 - staminaRatio) * 0.003 - pitcher.condition * 0.0004,
         0.0005,
-        0.015,
+        0.025,
       );
       if (rng.chance(deadBallProb)) {
         return handleDeadBall(state, batter, battingTeam, pBox[pitcher.id], pitchType, speedKmh, 'デッドボール（死球）！出塁');
@@ -1117,7 +1136,7 @@ export interface SimResult {
   maxSpeedKmh: number;
 }
 
-function createAverageBatter(idx: number): Player {
+export function createAverageBatter(idx: number): Player {
   return {
     id: `opp-batter-${idx}`,
     name: { family: `平均`, given: `${idx}番` },
@@ -1151,7 +1170,7 @@ function createAverageBatter(idx: number): Player {
   };
 }
 
-function createTestPitcher(input: SimPitcherInput): Player {
+export function createTestPitcher(input: SimPitcherInput): Player {
   return {
     id: 'test-pitcher',
     name: { family: '検証', given: 'エース' },
@@ -1189,7 +1208,13 @@ export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResul
   const simRng = rng || new Rng(Date.now() ^ (Math.random() * 0x7fffffff));
   const oppRoster = Array.from({ length: 9 }, (_, i) => createAverageBatter(i + 1));
   const testPitcher = createTestPitcher(input);
-  const myRoster = [testPitcher, ...oppRoster.slice(1)];
+  // 検証高校の野手陣（テスト投手が唯一の投手になるよう、野手ポジションに設定）
+  const myFielders = oppRoster.map((p, idx) => ({
+    ...p,
+    id: `my-fielder-${idx + 1}`,
+    position: (idx === 7 ? 'C' : 'OF') as any,
+  }));
+  const myRoster = [testPitcher, ...myFielders.slice(1)];
 
   const defaultStadium: StadiumSpec = {
     name: '標準球場',
@@ -1242,15 +1267,18 @@ export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResul
     const outcome = stepPitch(state, simRng);
     totalPitches++;
 
-    if (outcome.ballResult === 'BALL') {
+    const isWalk = outcome.ballResult === 'INTENTIONAL_WALK' || outcome.description.includes('四球');
+    const isDeadBall = outcome.ballResult === 'DEADBALL' || outcome.description.includes('死球');
+
+    if (outcome.ballResult === 'BALL' || isWalk) {
       balls++;
-    } else if (outcome.ballResult === 'DEADBALL' || outcome.description.includes('死球')) {
+    } else if (isDeadBall) {
       deadBalls++;
     } else {
       strikes++;
     }
 
-    if (outcome.ballResult === 'INTENTIONAL_WALK' || outcome.description.includes('四球')) {
+    if (isWalk) {
       walks++;
     }
 

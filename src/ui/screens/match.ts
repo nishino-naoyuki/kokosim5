@@ -87,6 +87,25 @@ let devPitcherParams: PitcherDevParams = {
 
 let devSimResult: SimResult | null = null;
 
+/** 開発チート機能：スライダーで設定した投手パラメータをマウンド上の登板中投手に即時同期 */
+function syncDevPitcherToLiveMatch(): void {
+  if (!activeMatch) return;
+  const pitchingTeam = activeMatch.isBottom ? activeMatch.teamA : activeMatch.teamB;
+  const pitcher = pitchingTeam.pitcher?.player;
+  if (pitcher) {
+    pitcher.abilities.arm = devPitcherParams.arm;
+    pitcher.abilities.form = devPitcherParams.form;
+    pitcher.abilities.control = devPitcherParams.control;
+    pitcher.abilities.breaking = devPitcherParams.breaking;
+    pitcher.abilities.stamina = devPitcherParams.stamina;
+    pitcher.abilities.guts = devPitcherParams.guts;
+    pitcher.condition = devPitcherParams.condition;
+    pitcher.throws = devPitcherParams.throws;
+  }
+  demoThrows = devPitcherParams.throws;
+  match3d?.setPitcherThrows(demoThrows);
+}
+
 let demoForm: PitchingFormType = 'OVERHAND_HIGH';
 let demoThrows: 'R' | 'L' = 'R';
 let demoCameraMode: CameraViewMode = 'PITCH_VIEW';
@@ -1062,6 +1081,11 @@ export function renderMatchScreen(): string {
         </div>
 
         ${devModalActiveTab === 'SIMULATION' ? `
+          <!-- チート機能インジケーター -->
+          <div style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.4);padding:4px 8px;border-radius:5px;font-size:9.5px;color:#fef08a;font-weight:700;display:flex;align-items:center;gap:4px">
+            ⚡ 投球画面のマウンド登板中投手にも即時反映中（開発チート機能）
+          </div>
+
           <!-- 1. 最高球速バッジ ＆ 相手打線情報 -->
           <div style="background:linear-gradient(135deg, #1e3a8a, #0f172a);border:1.5px solid #38bdf8;padding:8px 12px;border-radius:8px;display:flex;align-items:center;justify-content:space-between">
             <div>
@@ -1080,10 +1104,10 @@ export function renderMatchScreen(): string {
           <div>
             <div style="font-size:10px;color:#cbd5e1;font-weight:700;margin-bottom:3px">ワンクリック・プリセット:</div>
             <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:3px">
-              <button data-act="apply-pitcher-preset" data-preset="BALANCED" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;cursor:pointer">標準 (全50)</button>
+              <button data-act="apply-pitcher-preset" data-preset="BALANCED" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;cursor:pointer">標準 (125k)</button>
               <button data-act="apply-pitcher-preset" data-preset="ACE" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer">エース (150k)</button>
-              <button data-act="apply-pitcher-preset" data-preset="WILD" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #ef4444;background:#450a0a;color:#fca5a5;cursor:pointer">豪腕 (荒れ球)</button>
-              <button data-act="apply-pitcher-preset" data-preset="CRAFTY" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #10b981;background:#064e3b;color:#a7f3d0;cursor:pointer">技巧派 (針穴)</button>
+              <button data-act="apply-pitcher-preset" data-preset="WILD" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #ef4444;background:#450a0a;color:#fca5a5;cursor:pointer">豪腕 (160k/荒)</button>
+              <button data-act="apply-pitcher-preset" data-preset="CRAFTY" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #10b981;background:#064e3b;color:#a7f3d0;cursor:pointer">技巧派 (119k/針)</button>
             </div>
           </div>
 
@@ -1998,6 +2022,7 @@ export function mountMatch3D(): void {
       const param = inputEl.getAttribute('data-param') as keyof PitcherDevParams;
       if (param && param in devPitcherParams) {
         (devPitcherParams as any)[param] = parseInt(inputEl.value, 10);
+        syncDevPitcherToLiveMatch();
         requestRender();
       }
     });
@@ -2170,6 +2195,9 @@ registerActions({
 
   'toggle-form-editor': () => {
     isFormEditorOpen = !isFormEditorOpen;
+    if (isFormEditorOpen) {
+      syncDevPitcherToLiveMatch();
+    }
     requestRender();
   },
 
@@ -2188,15 +2216,17 @@ registerActions({
     } else if (preset === 'ACE') {
       devPitcherParams = { arm: 85, form: 80, control: 75, breaking: 75, stamina: 80, guts: 75, condition: 2, throws: 'R' };
     } else if (preset === 'WILD') {
-      devPitcherParams = { arm: 95, form: 85, control: 25, breaking: 35, stamina: 65, guts: 80, condition: 0, throws: 'R' };
+      devPitcherParams = { arm: 95, form: 85, control: 20, breaking: 30, stamina: 65, guts: 80, condition: 0, throws: 'R' };
     } else if (preset === 'CRAFTY') {
       devPitcherParams = { arm: 40, form: 45, control: 85, breaking: 80, stamina: 70, guts: 65, condition: 1, throws: 'L' };
     }
+    syncDevPitcherToLiveMatch();
     requestRender();
   },
 
   'toggle-dev-pitcher-throws': () => {
     devPitcherParams.throws = devPitcherParams.throws === 'R' ? 'L' : 'R';
+    syncDevPitcherToLiveMatch();
     requestRender();
   },
 
