@@ -1,6 +1,6 @@
 import { pitchVelocity } from '../core/abilities';
-import { clamp, type Rng } from '../core/rng';
-import type { Player } from '../core/types';
+import { clamp, Rng } from '../core/rng';
+import type { Handedness, Player } from '../core/types';
 import type { StadiumSpec } from '../render/stadium';
 import type {
   BatterBoxScore,
@@ -333,6 +333,17 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
         pitchZone: zone,
       });
     } else {
+      // デッドボール（死球）判定
+      // 制球力（ctrl: 0〜100）が低いほど、またスタミナ切れ・不調時にすっぽ抜けが発生
+      const deadBallProb = clamp(
+        0.003 + (50 - ctrl) * 0.00012 + (1 - staminaRatio) * 0.0025 - pitcher.condition * 0.0003,
+        0.0005,
+        0.015,
+      );
+      if (rng.chance(deadBallProb)) {
+        return handleDeadBall(state, batter, battingTeam, pBox[pitcher.id], pitchType, speedKmh, 'デッドボール（死球）！出塁');
+      }
+
       state.balls++;
       if (state.balls >= 4) {
         return handleWalk(state, batter, battingTeam, pBox[pitcher.id], '四球で歩く！');
@@ -811,6 +822,51 @@ function handleWalk(
   return res;
 }
 
+function handleDeadBall(
+  state: LiveMatchState,
+  batter: Player,
+  battingTeam: LiveTeam,
+  pBox: PitcherBoxScore,
+  pitchType: string,
+  speedKmh: number,
+  desc: string,
+): PitchOutcome {
+  state.balls = 0;
+  state.strikes = 0;
+  pBox.hitByPitch = (pBox.hitByPitch ?? 0) + 1;
+
+  const bBox = (state.isBottom ? state.boxScoreB : state.boxScoreA)[batter.id];
+  if (bBox) bBox.hitByPitch = (bBox.hitByPitch ?? 0) + 1;
+
+  // 押し出し判定
+  let runs = 0;
+  if (state.bases.b1 && state.bases.b2 && state.bases.b3) {
+    runs = 1;
+    if (state.isBottom) state.scoreB++;
+    else state.scoreA++;
+    const curLine = state.isBottom ? state.lineScoreB : state.lineScoreA;
+    curLine[curLine.length - 1] = (curLine[curLine.length - 1] ?? 0) + 1;
+  }
+  if (state.bases.b1 && state.bases.b2) state.bases.b3 = state.bases.b2;
+  if (state.bases.b1) state.bases.b2 = state.bases.b1;
+  state.bases.b1 = batter;
+
+  battingTeam.batterHistory[batter.id] = battingTeam.batterHistory[batter.id] || [];
+  battingTeam.batterHistory[batter.id].push('HBP');
+  battingTeam.currentBatterIndex = (battingTeam.currentBatterIndex + 1) % battingTeam.lineup.length;
+
+  checkInningProgress(state, runs);
+  evaluateAutoPause(state);
+
+  const res = makePitchResult(pitchType, speedKmh, 'DEADBALL', runs, 0, desc, {
+    pitchType,
+    pitchSpeedKmh: speedKmh,
+    pitchZone: 'BALL',
+  });
+  state.lastPitch = res;
+  return res;
+}
+
 // ---------------------------------------------------------------------------
 // イニング交代・試合終了判定
 // ---------------------------------------------------------------------------
@@ -1021,4 +1077,260 @@ export function issueIntentionalWalk(state: LiveMatchState): PitchOutcome {
   const outcome = handleWalk(state, batter, battingTeam, pBox, `✋ 申告敬遠：${batter.name.family}を一塁へ歩かせる！`);
   state.playLog.unshift(outcome.description);
   return outcome;
+}
+
+// ---------------------------------------------------------------------------
+// 開発・バランス検証用 5回高速シミュレーション
+// ---------------------------------------------------------------------------
+
+export interface SimPitcherInput {
+  arm: number;
+  form: number;
+  control: number;
+  breaking: number;
+  stamina: number;
+  guts: number;
+  condition: number; // -5 .. +5
+  throws: Handedness;
+  traits?: string[];
+}
+
+export interface SimResult {
+  matches: number;
+  innings: number;
+  pitches: number;
+  pitchesPerInning: number;
+  strikes: number;
+  balls: number;
+  strikeRate: number; // %
+  walks: number;
+  deadBalls: number;
+  hits: number;
+  singles: number;
+  doubles: number;
+  triples: number;
+  homeRuns: number;
+  runs: number;
+  earnedRuns: number;
+  strikeouts: number;
+  era: number;
+  maxSpeedKmh: number;
+}
+
+function createAverageBatter(idx: number): Player {
+  return {
+    id: `opp-batter-${idx}`,
+    name: { family: `平均`, given: `${idx}番` },
+    faceSeed: '0123456789abcdef',
+    grade: 2,
+    position: idx === 1 ? 'CF' : idx === 2 ? '2B' : idx === 3 ? '3B' : idx === 4 ? '1B' : idx === 5 ? 'LF' : idx === 6 ? 'RF' : idx === 7 ? 'SS' : idx === 8 ? 'C' : 'P',
+    throws: 'R',
+    bats: idx % 2 === 0 ? 'L' : 'R',
+    personality: 'NORMAL' as any,
+    growthType: 'NORMAL',
+    abilities: {
+      power: 50,
+      contact: 50,
+      eye: 50,
+      speed: 50,
+      accel: 50,
+      fielding: 50,
+      guts: 50,
+      arm: 50,
+      control: 50,
+      form: 50,
+      judgment: 50,
+      reaction: 50,
+      breaking: 50,
+      stamina: 50,
+    },
+    condition: 0,
+    fatigue: 0,
+    injury: null,
+    traits: [],
+  };
+}
+
+function createTestPitcher(input: SimPitcherInput): Player {
+  return {
+    id: 'test-pitcher',
+    name: { family: '検証', given: 'エース' },
+    faceSeed: 'abcdef0123456789',
+    grade: 3,
+    position: 'P',
+    throws: input.throws ?? 'R',
+    bats: 'R',
+    personality: 'COOL',
+    growthType: 'NORMAL',
+    abilities: {
+      power: 40,
+      contact: 40,
+      eye: 40,
+      speed: 50,
+      accel: 50,
+      fielding: 55,
+      guts: input.guts,
+      arm: input.arm,
+      control: input.control,
+      form: input.form,
+      judgment: 55,
+      reaction: 55,
+      breaking: input.breaking,
+      stamina: input.stamina,
+    },
+    condition: input.condition ?? 0,
+    fatigue: 0,
+    injury: null,
+    traits: input.traits || [],
+  };
+}
+
+export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResult {
+  const simRng = rng || new Rng(Date.now() ^ (Math.random() * 0x7fffffff));
+  const oppRoster = Array.from({ length: 9 }, (_, i) => createAverageBatter(i + 1));
+  const testPitcher = createTestPitcher(input);
+  const myRoster = [testPitcher, ...oppRoster.slice(1)];
+
+  const defaultStadium: StadiumSpec = {
+    name: '標準球場',
+    foulLine: 98,
+    center: 120,
+    fenceHeight: 3.0,
+  };
+
+  const state = createLiveMatch({
+    matchId: `sim-${Date.now()}`,
+    tournamentTitle: 'シミュレーション検証',
+    roundName: '5回戦',
+    stadium: defaultStadium,
+    teamA: {
+      id: 'opp-team',
+      name: '平均高校',
+      prefecture: '福岡県',
+      isPlayerTeam: false,
+      roster: oppRoster,
+      uniform: { capColor: '#334155', shirtColor: '#f1f5f9', pantsColor: '#f1f5f9', underShirtColor: '#334155' },
+    },
+    teamB: {
+      id: 'test-team',
+      name: '検証高校',
+      prefecture: '福岡県',
+      isPlayerTeam: true,
+      roster: myRoster,
+      uniform: { capColor: '#1e3a8a', shirtColor: '#ffffff', pantsColor: '#ffffff', underShirtColor: '#1e3a8a' },
+    },
+  });
+
+  let totalPitches = 0;
+  let strikes = 0;
+  let balls = 0;
+  let walks = 0;
+  let deadBalls = 0;
+  let singles = 0;
+  let doubles = 0;
+  let triples = 0;
+  let homeRuns = 0;
+  let strikeouts = 0;
+  let runs = 0;
+  let completedOuts = 0;
+
+  // 5回表＝計15アウト分を投球
+  while (completedOuts < 15 && totalPitches < 250) {
+    // 常に表（相手打線 vs テスト投手）
+    state.isBottom = false;
+
+    const outcome = stepPitch(state, simRng);
+    totalPitches++;
+
+    if (outcome.ballResult === 'BALL') {
+      balls++;
+    } else if (outcome.ballResult === 'DEADBALL' || outcome.description.includes('死球')) {
+      deadBalls++;
+    } else {
+      strikes++;
+    }
+
+    if (outcome.ballResult === 'INTENTIONAL_WALK' || outcome.description.includes('四球')) {
+      walks++;
+    }
+
+    if (outcome.description.includes('三振')) {
+      strikeouts++;
+    }
+
+    if (outcome.inPlayOutcome === '1B') singles++;
+    else if (outcome.inPlayOutcome === '2B') doubles++;
+    else if (outcome.inPlayOutcome === '3B') triples++;
+    else if (outcome.inPlayOutcome === 'HR') homeRuns++;
+
+    runs += outcome.runsScored;
+    completedOuts += outcome.outsAdded;
+
+    // 3アウトチェンジが起きた場合のイニング進行
+    if (state.isBottom) {
+      state.isBottom = false;
+      state.outs = 0;
+      state.bases = { b1: null, b2: null, b3: null };
+      state.inning++;
+    }
+  }
+
+  const hits = singles + doubles + triples + homeRuns;
+  const strikeRate = totalPitches > 0 ? (strikes / totalPitches) * 100 : 0;
+  const era = (runs * 9) / 5;
+  const maxSpeedKmh = Math.round(pitchVelocity(input.arm, input.form, input.traits || []));
+
+  return {
+    matches: 1,
+    innings: 5,
+    pitches: totalPitches,
+    pitchesPerInning: Number((totalPitches / 5).toFixed(1)),
+    strikes,
+    balls,
+    strikeRate: Number(strikeRate.toFixed(1)),
+    walks,
+    deadBalls,
+    hits,
+    singles,
+    doubles,
+    triples,
+    homeRuns,
+    runs,
+    earnedRuns: runs,
+    strikeouts,
+    era: Number(era.toFixed(2)),
+    maxSpeedKmh,
+  };
+}
+
+export function simulateMultipleMatches(input: SimPitcherInput, count = 10): SimResult {
+  const results: SimResult[] = [];
+  for (let i = 0; i < count; i++) {
+    results.push(simulateFiveInnings(input));
+  }
+
+  const avg = (fn: (r: SimResult) => number) =>
+    Number((results.reduce((sum, r) => sum + fn(r), 0) / count).toFixed(1));
+
+  return {
+    matches: count,
+    innings: 5,
+    pitches: avg((r) => r.pitches),
+    pitchesPerInning: avg((r) => r.pitchesPerInning),
+    strikes: avg((r) => r.strikes),
+    balls: avg((r) => r.balls),
+    strikeRate: avg((r) => r.strikeRate),
+    walks: avg((r) => r.walks),
+    deadBalls: avg((r) => r.deadBalls),
+    hits: avg((r) => r.hits),
+    singles: avg((r) => r.singles),
+    doubles: avg((r) => r.doubles),
+    triples: avg((r) => r.triples),
+    homeRuns: avg((r) => r.homeRuns),
+    runs: avg((r) => r.runs),
+    earnedRuns: avg((r) => r.earnedRuns),
+    strikeouts: avg((r) => r.strikeouts),
+    era: Number((results.reduce((sum, r) => sum + r.era, 0) / count).toFixed(2)),
+    maxSpeedKmh: results[0].maxSpeedKmh,
+  };
 }

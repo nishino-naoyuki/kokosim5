@@ -910,7 +910,7 @@ table.tbl.pl th.sortable:hover { background: #e2e8f0; }
   justify-content: center;
 }
 .dev-modal-card {
-  width: 440px;
+  width: min(520px, 94vw);
   max-height: 88%;
   overflow-y: auto;
   background: rgba(15, 23, 42, 0.98);

@@ -41,7 +41,7 @@ export type DefenseCommand =
 /**
  * 打席結果タイル
  */
-export type PaResultTile = 'HIT' | 'OUT' | 'BB' | 'HR' | '2B' | '3B' | 'ERR';
+export type PaResultTile = 'HIT' | 'OUT' | 'BB' | 'HBP' | 'HR' | '2B' | '3B' | 'ERR';
 
 /**
  * トラッキングHUDデータ（TRK-STATS）
@@ -62,7 +62,7 @@ export interface TrackingStats {
 export interface PitchOutcome {
   pitchType: string;
   speedKmh: number;
-  ballResult: 'BALL' | 'CALLED_STRIKE' | 'SWINGING_STRIKE' | 'FOUL' | 'IN_PLAY' | 'INTENTIONAL_WALK';
+  ballResult: 'BALL' | 'CALLED_STRIKE' | 'SWINGING_STRIKE' | 'FOUL' | 'IN_PLAY' | 'INTENTIONAL_WALK' | 'DEADBALL';
   inPlayOutcome?: '1B' | '2B' | '3B' | 'HR' | 'GROUNDOUT' | 'FLYOUT' | 'LINEOUT' | 'ERROR' | 'DOUBLE_PLAY' | 'SAC_BUNT' | 'SAC_FLY';
   runsScored: number;
   outsAdded: number;
@@ -130,6 +130,7 @@ export interface BatterBoxScore {
   rbi: number;
   strikeouts: number;
   walks: number;
+  hitByPitch?: number;
   homeRuns: number;
 }
 
@@ -144,6 +145,7 @@ export interface PitcherBoxScore {
   runs: number;
   earnedRuns: number;
   walks: number;
+  hitByPitch?: number;
   strikeouts: number;
   pitches: number;
 }

@@ -1,4 +1,5 @@
 import { sfx } from '../../audio/sfx';
+import { pitchVelocity } from '../../core/abilities';
 import { Rng } from '../../core/rng';
 import type { Player } from '../../core/types';
 import { game, touch } from '../../game/state';
@@ -12,7 +13,10 @@ import {
   issueIntentionalWalk,
   pinchHit,
   sendMessenger,
+  simulateFiveInnings,
+  simulateMultipleMatches,
   stepPitch,
+  type SimResult,
 } from '../../match/engine';
 import type { DefenseShift, LiveBases, LiveMatchState, OffenseTactic, PitchOutcome } from '../../match/types';
 import { actions, closeModal, go, openModal, registerActions, requestRender, shell, toast } from '../core';
@@ -56,6 +60,33 @@ const DEFENSE_SHIFT_LABELS: Record<DefenseShift, string> = {
 };
 
 // 案B：3D骨格ボーン連続フォーム ＆ フォームエディタ確認デモ用ステート
+type DevModalTab = 'SIMULATION' | 'FORM_EDITOR' | 'EFFECTS_TEST';
+let devModalActiveTab: DevModalTab = 'SIMULATION';
+
+interface PitcherDevParams {
+  arm: number;
+  form: number;
+  control: number;
+  breaking: number;
+  stamina: number;
+  guts: number;
+  condition: number;
+  throws: 'R' | 'L';
+}
+
+let devPitcherParams: PitcherDevParams = {
+  arm: 50,
+  form: 50,
+  control: 50,
+  breaking: 50,
+  stamina: 50,
+  guts: 50,
+  condition: 0,
+  throws: 'R',
+};
+
+let devSimResult: SimResult | null = null;
+
 let demoForm: PitchingFormType = 'OVERHAND_HIGH';
 let demoThrows: 'R' | 'L' = 'R';
 let demoCameraMode: CameraViewMode = 'PITCH_VIEW';
@@ -1007,164 +1038,315 @@ export function renderMatchScreen(): string {
       🛠️ 開発用
     </button>
 
-    <!-- 7. 開発用ポップアップモーダル（開閉式） -->
+    <!-- 7. 開発用ポップアップモーダル（開閉式・タブ構造） -->
     <div id="plan-b-form-panel" class="dev-modal-overlay" style="display:${isFormEditorOpen ? 'flex' : 'none'};">
       <div class="dev-modal-card">
         <div class="dev-modal-header">
-          <b>🛠️ 開発用コントロール ＆ 投球フォームエディタ</b>
+          <b style="font-size:13px;display:flex;align-items:center;gap:6px">
+            🛠️ 開発用コントロール ＆ バランス検証
+          </b>
           <button class="dev-modal-close-btn" data-act="toggle-form-editor">✕ 閉じる</button>
         </div>
 
-        <!-- コールアウト＆特大得点 演出テスト（ワンクリックプレビュー） -->
-        <div style="background:rgba(30,41,59,0.85);padding:8px 10px;border-radius:6px;border:1px solid #eab308;box-shadow:0 0 12px rgba(234,179,8,0.25)">
-          <div class="dev-section-title" style="color:#fef08a;font-weight:900">コールアウト＆特大得点 演出テスト (ワンクリック即時プレビュー):</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:5px">
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="STRIKEOUT" style="border-color:#ef4444;background:#450a0a;color:#fecaca">三振 (炎)</button>
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="WALK" style="border-color:#38bdf8;background:#0c4a6e;color:#bae6fd">四球 (氷結)</button>
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="DEADBALL" style="border-color:#f43f5e;background:#4c0519;color:#fecdd3">死球</button>
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="STRIKE" style="border-color:#eab308;background:#422006;color:#fef08a">ストライク</button>
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="BALL" style="border-color:#22c55e;background:#052e16;color:#bbf7d0">ボール</button>
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="FOUL" style="border-color:#a855f7;background:#3b0764;color:#e9d5ff">ファウル</button>
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="HIT" style="border-color:#06b6d4;background:#164e63;color:#a5f3fc">安打</button>
-            <button class="dev-pitch-btn" data-act="test-callout" data-kind="HOMERUN" style="border-color:#f59e0b;background:#78350f;color:#fde68a">本塁打</button>
-            <button class="dev-pitch-btn" data-act="test-big-score" data-score-type="pushout" style="grid-column:span 2;border-color:#facc15;background:linear-gradient(135deg,#1e3a8a,#0f172a);color:#fef08a;font-weight:900;padding:6px">特大スコア (押し出し得点)</button>
-            <button class="dev-pitch-btn" data-act="test-big-score" data-score-type="timely" style="grid-column:span 2;border-color:#facc15;background:linear-gradient(135deg,#1e3a8a,#0f172a);color:#fef08a;font-weight:900;padding:6px">特大スコア (タイムリー得点)</button>
+        <!-- タブ切り替えバー -->
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:4px;background:rgba(30,41,59,0.8);padding:3px;border-radius:6px;border:1px solid #334155">
+          <button data-act="set-dev-tab" data-tab="SIMULATION" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'SIMULATION' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'SIMULATION' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'SIMULATION' ? '#fff' : '#94a3b8'};cursor:pointer">
+            ⚾ 投手能力・5回検証
+          </button>
+          <button data-act="set-dev-tab" data-tab="FORM_EDITOR" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'FORM_EDITOR' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'FORM_EDITOR' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'FORM_EDITOR' ? '#fff' : '#94a3b8'};cursor:pointer">
+            🕺 フォームエディタ
+          </button>
+          <button data-act="set-dev-tab" data-tab="EFFECTS_TEST" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'EFFECTS_TEST' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'EFFECTS_TEST' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'EFFECTS_TEST' ? '#fff' : '#94a3b8'};cursor:pointer">
+            ✨ 演出テスト
+          </button>
+        </div>
+
+        ${devModalActiveTab === 'SIMULATION' ? `
+          <!-- 1. 最高球速バッジ ＆ 相手打線情報 -->
+          <div style="background:linear-gradient(135deg, #1e3a8a, #0f172a);border:1.5px solid #38bdf8;padding:8px 12px;border-radius:8px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:9.5px;color:#93c5fd;font-weight:700">最高球速 (肩の強さ × 投球フォーム)</div>
+              <div style="font-size:22px;font-weight:900;color:#fef08a;line-height:1.2">
+                ${Math.round(pitchVelocity(devPitcherParams.arm, devPitcherParams.form))} <span style="font-size:12px;color:#cbd5e1">km/h</span>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:9.5px;color:#94a3b8">対戦相手 (5イニング・15アウト)</div>
+              <div style="font-size:12px;font-weight:800;color:#38bdf8">平均高校（ALL 50 / C相当）</div>
+            </div>
           </div>
-        </div>
 
-        <!-- 球種・弾道テスト（物理投球/打撃） -->
-        <div style="background:rgba(30,41,59,0.85);padding:8px 10px;border-radius:6px;border:1px solid #334155">
-          <div class="dev-section-title">⚡ 球種・弾道テスト (物理投球/打撃):</div>
-          <div class="dev-pitch-grid">
-            <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="FOUR_SEAM" data-hit="false">⚾ 146k 直球</button>
-            <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="SLIDER" data-hit="false">🌪️ 134k スライダ</button>
-            <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="CURVE" data-hit="false">🌈 116k カーブ</button>
-            <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="FORK" data-hit="false">⚡ 130k フォーク</button>
-            <button class="dev-pitch-btn hit" style="grid-column:span 2" data-act="trigger-demo" data-pitch="FOUR_SEAM" data-hit="true">🏏 打撃一閃 (ヒット)</button>
+          <!-- 2. ワンクリック・プリセット -->
+          <div>
+            <div style="font-size:10px;color:#cbd5e1;font-weight:700;margin-bottom:3px">ワンクリック・プリセット:</div>
+            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:3px">
+              <button data-act="apply-pitcher-preset" data-preset="BALANCED" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;cursor:pointer">標準 (全50)</button>
+              <button data-act="apply-pitcher-preset" data-preset="ACE" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer">エース (150k)</button>
+              <button data-act="apply-pitcher-preset" data-preset="WILD" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #ef4444;background:#450a0a;color:#fca5a5;cursor:pointer">豪腕 (荒れ球)</button>
+              <button data-act="apply-pitcher-preset" data-preset="CRAFTY" style="padding:5px 2px;font-size:10px;font-weight:700;border-radius:4px;border:1px solid #10b981;background:#064e3b;color:#a7f3d0;cursor:pointer">技巧派 (針穴)</button>
+            </div>
           </div>
-        </div>
 
-        <!-- 守備シフト5種 確認切替 -->
-        <div style="background:rgba(30,41,59,0.85);padding:6px 8px;border-radius:6px;border:1px solid #334155">
-          <div class="dev-section-title">🛡️ 守備シフト表示切替 (全5種テスト):</div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:4px">
-            <button data-act="set-shift" data-val="NORMAL" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'NORMAL' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'NORMAL' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">通常</button>
-            <button data-act="set-shift" data-val="FORWARD" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'FORWARD' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'FORWARD' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">前進守備</button>
-            <button data-act="set-shift" data-val="DOUBLE_PLAY" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'DOUBLE_PLAY' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'DOUBLE_PLAY' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">併殺</button>
-            <button data-act="set-shift" data-val="DEEP_OUTFIELD" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'DEEP_OUTFIELD' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'DEEP_OUTFIELD' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">長打警戒</button>
-            <button data-act="set-shift" data-val="BUNT_DEFENSE" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'BUNT_DEFENSE' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'BUNT_DEFENSE' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">バント警戒</button>
+          <!-- 3. 能力スライダー群（0〜100、ランク表示） -->
+          <div style="background:rgba(30,41,59,0.85);padding:6px 10px;border-radius:6px;border:1px solid #334155;display:flex;flex-direction:column;gap:3px">
+            <div style="display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:6px;font-size:10px">
+              <span>肩の強さ (球速原資):</span>
+              <input type="range" min="0" max="100" value="${devPitcherParams.arm}" data-act="pitcher-param-slider" data-param="arm" style="accent-color:#38bdf8;cursor:pointer" />
+              <span style="text-align:right;font-weight:800;color:#fbbf24">${devPitcherParams.arm} (${abilityRank(devPitcherParams.arm).rank})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:6px;font-size:10px">
+              <span>投球フォーム (力伝達):</span>
+              <input type="range" min="0" max="100" value="${devPitcherParams.form}" data-act="pitcher-param-slider" data-param="form" style="accent-color:#38bdf8;cursor:pointer" />
+              <span style="text-align:right;font-weight:800;color:#fbbf24">${devPitcherParams.form} (${abilityRank(devPitcherParams.form).rank})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:6px;font-size:10px">
+              <span>コントロール (制球):</span>
+              <input type="range" min="0" max="100" value="${devPitcherParams.control}" data-act="pitcher-param-slider" data-param="control" style="accent-color:#38bdf8;cursor:pointer" />
+              <span style="text-align:right;font-weight:800;color:#fbbf24">${devPitcherParams.control} (${abilityRank(devPitcherParams.control).rank})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:6px;font-size:10px">
+              <span>変化球キレ (空振率):</span>
+              <input type="range" min="0" max="100" value="${devPitcherParams.breaking}" data-act="pitcher-param-slider" data-param="breaking" style="accent-color:#38bdf8;cursor:pointer" />
+              <span style="text-align:right;font-weight:800;color:#fbbf24">${devPitcherParams.breaking} (${abilityRank(devPitcherParams.breaking).rank})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:6px;font-size:10px">
+              <span>スタミナ (バテ耐性):</span>
+              <input type="range" min="0" max="100" value="${devPitcherParams.stamina}" data-act="pitcher-param-slider" data-param="stamina" style="accent-color:#38bdf8;cursor:pointer" />
+              <span style="text-align:right;font-weight:800;color:#fbbf24">${devPitcherParams.stamina} (${abilityRank(devPitcherParams.stamina).rank})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:6px;font-size:10px">
+              <span>度胸 (ピンチ耐性):</span>
+              <input type="range" min="0" max="100" value="${devPitcherParams.guts}" data-act="pitcher-param-slider" data-param="guts" style="accent-color:#38bdf8;cursor:pointer" />
+              <span style="text-align:right;font-weight:800;color:#fbbf24">${devPitcherParams.guts} (${abilityRank(devPitcherParams.guts).rank})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:6px;font-size:10px">
+              <span>調子 (-5〜+5):</span>
+              <input type="range" min="-5" max="5" value="${devPitcherParams.condition}" data-act="pitcher-param-slider" data-param="condition" style="accent-color:#ec4899;cursor:pointer" />
+              <span style="text-align:right;font-weight:800;color:${devPitcherParams.condition > 0 ? '#f43f5e' : devPitcherParams.condition < 0 ? '#38bdf8' : '#e2e8f0'}">
+                ${devPitcherParams.condition > 0 ? `+${devPitcherParams.condition}` : devPitcherParams.condition}
+              </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;font-size:10px">
+              <span>利き腕:</span>
+              <button data-act="toggle-dev-pitcher-throws" style="padding:2px 10px;border-radius:4px;border:1px solid #f59e0b;background:#78350f;color:#fde68a;font-weight:800;cursor:pointer">
+                ${devPitcherParams.throws === 'R' ? '右投げ (R)' : '左投げ (L)'}
+              </button>
+            </div>
           </div>
-        </div>
 
-      <!-- ① フォーム種別切替（実写連続写真4種＋高低2種完全準拠） -->
-      <div>
-        <div style="color:#cbd5e1;font-weight:700;margin-bottom:3px">① 投球フォーム切替 (連続写真トレース):</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
-          <button class="pb-form-btn" data-act="pb-set-form" data-form="OVERHAND_HIGH" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'OVERHAND_HIGH' ? '#f59e0b' : '#475569'};background:${demoForm === 'OVERHAND_HIGH' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">オーバースロー(高・今井)</button>
-          <button class="pb-form-btn" data-act="pb-set-form" data-form="OVERHAND_LOW" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'OVERHAND_LOW' ? '#f59e0b' : '#475569'};background:${demoForm === 'OVERHAND_LOW' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">オーバースロー(低・すり足)</button>
-          <button class="pb-form-btn" data-act="pb-set-form" data-form="THREE_QUARTERS" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'THREE_QUARTERS' ? '#f59e0b' : '#475569'};background:${demoForm === 'THREE_QUARTERS' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">スリークォーター(大勢型)</button>
-          <button class="pb-form-btn" data-act="pb-set-form" data-form="SIDEARM" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'SIDEARM' ? '#f59e0b' : '#475569'};background:${demoForm === 'SIDEARM' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">サイドスロー(高校#1型)</button>
-          <button class="pb-form-btn" data-act="pb-set-form" data-form="SUBMARINE" style="grid-column:span 2;padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'SUBMARINE' ? '#f59e0b' : '#475569'};background:${demoForm === 'SUBMARINE' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">アンダースロー (背面腕天突き➜超低空すくい投げ)</button>
-        </div>
-      </div>
+          <!-- 4. シミュレーションボタン -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button data-act="run-5inn-simulation" style="background:linear-gradient(135deg, #0284c7, #0369a1);border:1px solid #38bdf8;color:#fff;padding:8px 4px;border-radius:6px;font-weight:900;font-size:11.5px;cursor:pointer;box-shadow:0 2px 8px rgba(2,132,199,0.3)">
+              ▶ 5回シミュレート (1試合)
+            </button>
+            <button data-act="run-10match-simulation" style="background:linear-gradient(135deg, #059669, #047857);border:1px solid #34d399;color:#fff;padding:8px 4px;border-radius:6px;font-weight:900;font-size:11.5px;cursor:pointer;box-shadow:0 2px 8px rgba(5,150,105,0.3)">
+              🔁 10試合平均で検証
+            </button>
+          </div>
 
-      <!-- ② カメラ視点 ＆ 利き腕切替 -->
-      <div style="display:flex;gap:4px;align-items:center;justify-content:space-between">
-        <div style="display:flex;gap:3px;flex:1">
-          <button class="pb-cam-btn" data-act="pb-set-cam" data-cam="PITCH_VIEW" style="flex:1;padding:4px 3px;border-radius:5px;border:1px solid ${demoCameraMode === 'PITCH_VIEW' ? '#38bdf8' : '#475569'};background:${demoCameraMode === 'PITCH_VIEW' ? '#0369a1' : '#1e293b'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">📹 センター背面</button>
-          <button class="pb-cam-btn" data-act="pb-set-cam" data-cam="SIDE_3B_VIEW" style="flex:1;padding:4px 3px;border-radius:5px;border:1px solid ${demoCameraMode === 'SIDE_3B_VIEW' ? '#38bdf8' : '#475569'};background:${demoCameraMode === 'SIDE_3B_VIEW' ? '#0369a1' : '#1e293b'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">📐 三塁側(真横)</button>
-          <button class="pb-cam-btn" data-act="pb-set-cam" data-cam="FRONT_SUB_VIEW" style="flex:1;padding:4px 3px;border-radius:5px;border:1px solid ${demoCameraMode === 'FRONT_SUB_VIEW' ? '#38bdf8' : '#475569'};background:${demoCameraMode === 'FRONT_SUB_VIEW' ? '#0369a1' : '#1e293b'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">🎥 本塁斜め前</button>
-        </div>
-        <button id="pb-throws-btn" data-act="pb-toggle-throws" style="padding:4px 6px;border-radius:5px;border:1px solid #f59e0b;background:#78350f;color:#fde68a;cursor:pointer;font-size:10px;font-weight:800">${demoThrows === 'R' ? '右投 (右足軸)' : '左投 (左足軸)'}</button>
-      </div>
+          <!-- 5. シミュレーション結果カード -->
+          ${devSimResult ? `
+          <div style="background:rgba(15,23,42,0.95);border:1.5px solid #eab308;border-radius:8px;padding:10px 12px;box-shadow:0 0 16px rgba(234,179,8,0.25)">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:5px;margin-bottom:8px">
+              <span style="font-weight:900;color:#fef08a;font-size:11.5px">
+                📊 5回（15アウト）結果 [ ${devSimResult.matches === 1 ? '1試合' : `${devSimResult.matches}試合の平均`} ]
+              </span>
+              <span style="font-size:10.5px;color:#94a3b8">最高: ${devSimResult.maxSpeedKmh}km/h</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:5px;text-align:center">
+              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
+                <div style="font-size:9px;color:#94a3b8">総投球数 (回平均)</div>
+                <div style="font-size:14px;font-weight:900;color:#f8fafc">${devSimResult.pitches} <span style="font-size:9.5px;color:#94a3b8">(${devSimResult.pitchesPerInning}/回)</span></div>
+              </div>
+              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
+                <div style="font-size:9px;color:#94a3b8">ストライク率</div>
+                <div style="font-size:14px;font-weight:900;color:#38bdf8">${devSimResult.strikeRate}%</div>
+              </div>
+              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
+                <div style="font-size:9px;color:#94a3b8">失点 (防御率換算)</div>
+                <div style="font-size:14px;font-weight:900;color:#ef4444">${devSimResult.runs}点 <span style="font-size:9.5px;color:#fca5a5">(ERA ${devSimResult.era})</span></div>
+              </div>
+              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
+                <div style="font-size:9px;color:#94a3b8">被安打 (単/二/三/本)</div>
+                <div style="font-size:13px;font-weight:900;color:#facc15">
+                  ${devSimResult.hits}本 <span style="font-size:9px;color:#94a3b8">(${devSimResult.singles}/${devSimResult.doubles}/${devSimResult.triples}/${devSimResult.homeRuns})</span>
+                </div>
+              </div>
+              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
+                <div style="font-size:9px;color:#94a3b8">与四球 (BB)</div>
+                <div style="font-size:14px;font-weight:900;color:#a78bfa">${devSimResult.walks}個</div>
+              </div>
+              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
+                <div style="font-size:9px;color:#94a3b8">与死球 (HBP)</div>
+                <div style="font-size:14px;font-weight:900;color:#f43f5e">${devSimResult.deadBalls}個</div>
+              </div>
+              <div style="background:#1e293b;padding:5px 4px;border-radius:5px;grid-column:span 3">
+                <div style="font-size:9px;color:#94a3b8">奪三振 (K)</div>
+                <div style="font-size:14px;font-weight:900;color:#34d399">${devSimResult.strikeouts}個</div>
+              </div>
+            </div>
+          </div>
+          ` : `
+          <div style="background:rgba(15,23,42,0.6);border:1px dashed #475569;border-radius:8px;padding:12px;text-align:center;color:#94a3b8;font-size:10.5px">
+            💡 上のボタンを押すと、画面描画を省いて5回（15アウト）の投球を高速計算し、四死球・被安打・失点等の結果を表示します。
+          </div>
+          `}
+        ` : devModalActiveTab === 'FORM_EDITOR' ? `
+          <!-- 【タブ2】投球フォームエディタ -->
+          <!-- ① フォーム種別切替（実写連続写真4種＋高低2種完全準拠） -->
+          <div>
+            <div style="color:#cbd5e1;font-weight:700;margin-bottom:3px">① 投球フォーム切替 (連続写真トレース):</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+              <button class="pb-form-btn" data-act="pb-set-form" data-form="OVERHAND_HIGH" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'OVERHAND_HIGH' ? '#f59e0b' : '#475569'};background:${demoForm === 'OVERHAND_HIGH' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">オーバースロー(高・今井)</button>
+              <button class="pb-form-btn" data-act="pb-set-form" data-form="OVERHAND_LOW" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'OVERHAND_LOW' ? '#f59e0b' : '#475569'};background:${demoForm === 'OVERHAND_LOW' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">オーバースロー(低・すり足)</button>
+              <button class="pb-form-btn" data-act="pb-set-form" data-form="THREE_QUARTERS" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'THREE_QUARTERS' ? '#f59e0b' : '#475569'};background:${demoForm === 'THREE_QUARTERS' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">スリークォーター(大勢型)</button>
+              <button class="pb-form-btn" data-act="pb-set-form" data-form="SIDEARM" style="padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'SIDEARM' ? '#f59e0b' : '#475569'};background:${demoForm === 'SIDEARM' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">サイドスロー(高校#1型)</button>
+              <button class="pb-form-btn" data-act="pb-set-form" data-form="SUBMARINE" style="grid-column:span 2;padding:4px 5px;border-radius:5px;border:1px solid ${demoForm === 'SUBMARINE' ? '#f59e0b' : '#475569'};background:${demoForm === 'SUBMARINE' ? '#1e40af' : '#1e293b'};color:#fff;cursor:pointer;font-size:10.5px;font-weight:700">アンダースロー (背面腕天突き➜超低空すくい投げ)</button>
+            </div>
+          </div>
 
-      <!-- ③ 連続15コマ シークバー ＆ コマ送りボタン -->
-      <div style="background:rgba(30,41,59,0.85);padding:5px 7px;border-radius:6px;border:1px solid #334155">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-          <span style="color:#93c5fd;font-weight:700">③ 連続フォーム確認 (0%〜100%):</span>
-          <span id="pb-phase-label" style="color:#fbbf24;font-weight:800;font-size:10px">① セット構え (0%)</span>
-        </div>
-        <input id="pb-phase-slider" type="range" min="0" max="100" value="${Math.round(demoPhase * 100)}" style="width:100%;accent-color:#3b82f6;cursor:pointer" />
-        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin-top:3px">
-          <button data-act="pb-step-phase" data-phase="0.00" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">①構え</button>
-          <button data-act="pb-step-phase" data-phase="0.08" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">②重心</button>
-          <button data-act="pb-step-phase" data-phase="0.16" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">③足始</button>
-          <button data-act="pb-step-phase" data-phase="0.24" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">④足頂</button>
-          <button data-act="pb-step-phase" data-phase="0.32" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer;font-weight:700" title="軸足プレート固定・ヒップファースト並進">⑤並初</button>
-          <button data-act="pb-step-phase" data-phase="0.38" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer;font-weight:700" title="軸足プレート固定・並進沈み込み">⑥並沈</button>
-          <button data-act="pb-step-phase" data-phase="0.45" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer;font-weight:700" title="軸足プレート固定・腕の割れ">⑦割れ</button>
-          <button data-act="pb-step-phase" data-phase="0.52" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑧着地</button>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:2.5px">
-          <button data-act="pb-step-phase" data-phase="0.58" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑨トップ</button>
-          <button data-act="pb-step-phase" data-phase="0.63" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑩外旋</button>
-          <button data-act="pb-step-phase" data-phase="0.68" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #f59e0b;background:#78350f;color:#fef08a;cursor:pointer;font-weight:800">⑪放球</button>
-          <button data-act="pb-step-phase" data-phase="0.74" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑫減速</button>
-          <button data-act="pb-step-phase" data-phase="0.80" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑬巻込</button>
-          <button data-act="pb-step-phase" data-phase="0.88" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑭フォロー</button>
-          <button data-act="pb-step-phase" data-phase="1.00" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑮守備</button>
-        </div>
-        <div style="display:flex;gap:4px;margin-top:4px">
-          <button data-act="pb-play-motion" data-speed="0.35" style="flex:1;padding:4px 5px;border-radius:5px;border:1px solid #38bdf8;background:#0284c7;color:#fff;cursor:pointer;font-weight:800;font-size:10px">▶ スロー連続再生 (0.35x)</button>
-          <button data-act="pb-play-motion" data-speed="1.0" style="flex:1;padding:4px 5px;border-radius:5px;border:1px solid #10b981;background:#059669;color:#fff;cursor:pointer;font-weight:800;font-size:10px">⚾ 通常投球再生 (1.0x)</button>
-        </div>
-      </div>
+          <!-- ② カメラ視点 ＆ 利き腕切替 -->
+          <div style="display:flex;gap:4px;align-items:center;justify-content:space-between">
+            <div style="display:flex;gap:3px;flex:1">
+              <button class="pb-cam-btn" data-act="pb-set-cam" data-cam="PITCH_VIEW" style="flex:1;padding:4px 3px;border-radius:5px;border:1px solid ${demoCameraMode === 'PITCH_VIEW' ? '#38bdf8' : '#475569'};background:${demoCameraMode === 'PITCH_VIEW' ? '#0369a1' : '#1e293b'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">📹 センター背面</button>
+              <button class="pb-cam-btn" data-act="pb-set-cam" data-cam="SIDE_3B_VIEW" style="flex:1;padding:4px 3px;border-radius:5px;border:1px solid ${demoCameraMode === 'SIDE_3B_VIEW' ? '#38bdf8' : '#475569'};background:${demoCameraMode === 'SIDE_3B_VIEW' ? '#0369a1' : '#1e293b'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">📐 三塁側(真横)</button>
+              <button class="pb-cam-btn" data-act="pb-set-cam" data-cam="FRONT_SUB_VIEW" style="flex:1;padding:4px 3px;border-radius:5px;border:1px solid ${demoCameraMode === 'FRONT_SUB_VIEW' ? '#38bdf8' : '#475569'};background:${demoCameraMode === 'FRONT_SUB_VIEW' ? '#0369a1' : '#1e293b'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">🎥 本塁斜め前</button>
+            </div>
+            <button id="pb-throws-btn" data-act="pb-toggle-throws" style="padding:4px 6px;border-radius:5px;border:1px solid #f59e0b;background:#78350f;color:#fde68a;cursor:pointer;font-size:10px;font-weight:800">${demoThrows === 'R' ? '右投 (右足軸)' : '左投 (左足軸)'}</button>
+          </div>
 
-      <!-- ④ 3Dボーン フォームエディタ（フレーム別微調整スライダー） -->
-      <div style="background:rgba(30,41,59,0.85);padding:5px 7px;border-radius:6px;border:1px solid #334155;display:flex;flex-direction:column;gap:3px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="color:#a7f3d0;font-weight:700">④ 3Dボーン フォームエディタ (リアルタイム変形):</span>
-          <button data-act="pb-reset-mods" style="padding:1px 6px;font-size:9.5px;border-radius:4px;border:1px solid #64748b;background:#334155;color:#f8fafc;cursor:pointer">リセット</button>
-        </div>
-        <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
-          <span>足上げ高さ (②):</span>
-          <input id="pb-mod-leg" type="range" min="20" max="150" value="${Math.round(demoModifiers.legLiftHeight * 100)}" style="accent-color:#10b981;cursor:pointer" />
-          <span id="pb-mod-leg-val" style="text-align:right;color:#fbbf24">${Math.round(demoModifiers.legLiftHeight * 100)}%</span>
-        </div>
-        <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
-          <span>軸足沈み込み (③):</span>
-          <input id="pb-mod-sink" type="range" min="50" max="150" value="${Math.round(demoModifiers.pelvisSinkDepth * 100)}" style="accent-color:#10b981;cursor:pointer" />
-          <span id="pb-mod-sink-val" style="text-align:right;color:#fbbf24">${Math.round(demoModifiers.pelvisSinkDepth * 100)}%</span>
-        </div>
-        <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
-          <span>腕の角度補正 (⑧):</span>
-          <input id="pb-mod-arm" type="range" min="-35" max="35" value="${Math.round(demoModifiers.armSlotOffsetDeg)}" style="accent-color:#10b981;cursor:pointer" />
-          <span id="pb-mod-arm-val" style="text-align:right;color:#fbbf24">${demoModifiers.armSlotOffsetDeg >= 0 ? '+' : ''}${Math.round(demoModifiers.armSlotOffsetDeg)}°</span>
-        </div>
-        <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
-          <span>体幹傾き補正:</span>
-          <input id="pb-mod-tilt" type="range" min="-25" max="25" value="${Math.round(demoModifiers.torsoTiltOffsetDeg)}" style="accent-color:#10b981;cursor:pointer" />
-          <span id="pb-mod-tilt-val" style="text-align:right;color:#fbbf24">${demoModifiers.torsoTiltOffsetDeg >= 0 ? '+' : ''}${Math.round(demoModifiers.torsoTiltOffsetDeg)}°</span>
-        </div>
-      </div>
+          <!-- ③ 連続15コマ シークバー ＆ コマ送りボタン -->
+          <div style="background:rgba(30,41,59,0.85);padding:5px 7px;border-radius:6px;border:1px solid #334155">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+              <span style="color:#93c5fd;font-weight:700">③ 連続フォーム確認 (0%〜100%):</span>
+              <span id="pb-phase-label" style="color:#fbbf24;font-weight:800;font-size:10px">① セット構え (0%)</span>
+            </div>
+            <input id="pb-phase-slider" type="range" min="0" max="100" value="${Math.round(demoPhase * 100)}" style="width:100%;accent-color:#3b82f6;cursor:pointer" />
+            <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin-top:3px">
+              <button data-act="pb-step-phase" data-phase="0.00" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">①構え</button>
+              <button data-act="pb-step-phase" data-phase="0.08" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">②重心</button>
+              <button data-act="pb-step-phase" data-phase="0.16" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">③足始</button>
+              <button data-act="pb-step-phase" data-phase="0.24" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">④足頂</button>
+              <button data-act="pb-step-phase" data-phase="0.32" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer;font-weight:700" title="軸足プレート固定・ヒップファースト並進">⑤並初</button>
+              <button data-act="pb-step-phase" data-phase="0.38" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer;font-weight:700" title="軸足プレート固定・並進沈み込み">⑥並沈</button>
+              <button data-act="pb-step-phase" data-phase="0.45" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer;font-weight:700" title="軸足プレート固定・腕の割れ">⑦割れ</button>
+              <button data-act="pb-step-phase" data-phase="0.52" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑧着地</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:2.5px">
+              <button data-act="pb-step-phase" data-phase="0.58" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑨トップ</button>
+              <button data-act="pb-step-phase" data-phase="0.63" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑩外旋</button>
+              <button data-act="pb-step-phase" data-phase="0.68" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #f59e0b;background:#78350f;color:#fef08a;cursor:pointer;font-weight:800">⑪放球</button>
+              <button data-act="pb-step-phase" data-phase="0.74" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑫減速</button>
+              <button data-act="pb-step-phase" data-phase="0.80" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑬巻込</button>
+              <button data-act="pb-step-phase" data-phase="0.88" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑭フォロー</button>
+              <button data-act="pb-step-phase" data-phase="1.00" style="padding:2.5px 1px;font-size:8.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑮守備</button>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:4px">
+              <button data-act="pb-play-motion" data-speed="0.35" style="flex:1;padding:4px 5px;border-radius:5px;border:1px solid #38bdf8;background:#0284c7;color:#fff;cursor:pointer;font-weight:800;font-size:10px">▶ スロー連続再生 (0.35x)</button>
+              <button data-act="pb-play-motion" data-speed="1.0" style="flex:1;padding:4px 5px;border-radius:5px;border:1px solid #10b981;background:#059669;color:#fff;cursor:pointer;font-weight:800;font-size:10px">⚾ 通常投球再生 (1.0x)</button>
+            </div>
+          </div>
 
-      <!-- ⑤ ユニフォーム ＆ 背番号 リアルタイム反映テスト -->
-      <div style="background:rgba(30,41,59,0.85);padding:5px 7px;border-radius:6px;border:1px solid #334155;display:flex;flex-direction:column;gap:4px">
-        <div style="color:#f9a8d4;font-weight:700">⑤ ユニフォーム＆背番号 リアルタイム変更実証:</div>
-        <div style="display:flex;gap:3px;align-items:center">
-          <span style="font-size:10px;color:#cbd5e1;width:44px">背番号:</span>
-          <button class="pb-num-btn" data-act="pb-set-jersey" data-num="1" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 1 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 1 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#1</button>
-          <button class="pb-num-btn" data-act="pb-set-jersey" data-num="10" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 10 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 10 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#10</button>
-          <button class="pb-num-btn" data-act="pb-set-jersey" data-num="11" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 11 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 11 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#11</button>
-          <button class="pb-num-btn" data-act="pb-set-jersey" data-num="18" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 18 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 18 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#18</button>
-        </div>
-        <div style="display:flex;gap:3px;align-items:center">
-          <span style="font-size:10px;color:#cbd5e1;width:44px">柄3種:</span>
-          <button class="pb-pat-btn" data-act="pb-set-pattern" data-pat="NORMAL" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoUniformPattern === 'NORMAL' ? '#f59e0b' : '#475569'};background:${demoUniformPattern === 'NORMAL' ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px">無地</button>
-          <button class="pb-pat-btn" data-act="pb-set-pattern" data-pat="PINSTRIPE" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoUniformPattern === 'PINSTRIPE' ? '#f59e0b' : '#475569'};background:${demoUniformPattern === 'PINSTRIPE' ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px">縦じま</button>
-          <button class="pb-pat-btn" data-act="pb-set-pattern" data-pat="ACCENT_LINE" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoUniformPattern === 'ACCENT_LINE' ? '#f59e0b' : '#475569'};background:${demoUniformPattern === 'ACCENT_LINE' ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px">中央ライン</button>
-        </div>
-        <div style="display:flex;gap:3px;align-items:center">
-          <span style="font-size:10px;color:#cbd5e1;width:44px">配色:</span>
-          <button class="pb-col-btn" data-act="pb-set-color" data-col="SEIUN" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'SEIUN' ? '#f59e0b' : '#475569'};background:#1e3a8a;color:#fff;cursor:pointer;font-size:9.5px">白×濃紺</button>
-          <button class="pb-col-btn" data-act="pb-set-color" data-col="CRIMSON" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'CRIMSON' ? '#f59e0b' : '#475569'};background:#881337;color:#fff;cursor:pointer;font-size:9.5px">生成×臙脂</button>
-          <button class="pb-col-btn" data-act="pb-set-color" data-col="SKY" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'SKY' ? '#f59e0b' : '#475569'};background:#0284c7;color:#fff;cursor:pointer;font-size:9.5px">水色×紺</button>
-          <button class="pb-col-btn" data-act="pb-set-color" data-col="GOLD" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'GOLD' ? '#f59e0b' : '#475569'};background:#111827;color:#fde047;cursor:pointer;font-size:9.5px">白×黒金</button>
-        </div>
-        <button id="pb-mask-btn" data-act="pb-toggle-mask" style="margin-top:2px;padding:4px 6px;border-radius:5px;border:1px solid ${demoColorMaskMode ? '#ec4899' : '#64748b'};background:${demoColorMaskMode ? '#831843' : '#0f172a'};color:#fdf2f8;cursor:pointer;font-size:10px;font-weight:800">
-          🎨 部位別カラーIDマスク表示 (R:帽 C:袖 G:上 B:下 M:靴下): ${demoColorMaskMode ? 'ON' : 'OFF'}
-        </button>
+          <!-- ④ 3Dボーン フォームエディタ（フレーム別微調整スライダー） -->
+          <div style="background:rgba(30,41,59,0.85);padding:5px 7px;border-radius:6px;border:1px solid #334155;display:flex;flex-direction:column;gap:3px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="color:#a7f3d0;font-weight:700">④ 3Dボーン フォームエディタ (リアルタイム変形):</span>
+              <button data-act="pb-reset-mods" style="padding:1px 6px;font-size:9.5px;border-radius:4px;border:1px solid #64748b;background:#334155;color:#f8fafc;cursor:pointer">リセット</button>
+            </div>
+            <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
+              <span>足上げ高さ (②):</span>
+              <input id="pb-mod-leg" type="range" min="20" max="150" value="${Math.round(demoModifiers.legLiftHeight * 100)}" style="accent-color:#10b981;cursor:pointer" />
+              <span id="pb-mod-leg-val" style="text-align:right;color:#fbbf24">${Math.round(demoModifiers.legLiftHeight * 100)}%</span>
+            </div>
+            <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
+              <span>軸足沈み込み (③):</span>
+              <input id="pb-mod-sink" type="range" min="50" max="150" value="${Math.round(demoModifiers.pelvisSinkDepth * 100)}" style="accent-color:#10b981;cursor:pointer" />
+              <span id="pb-mod-sink-val" style="text-align:right;color:#fbbf24">${Math.round(demoModifiers.pelvisSinkDepth * 100)}%</span>
+            </div>
+            <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
+              <span>腕の角度補正 (⑧):</span>
+              <input id="pb-mod-arm" type="range" min="-35" max="35" value="${Math.round(demoModifiers.armSlotOffsetDeg)}" style="accent-color:#10b981;cursor:pointer" />
+              <span id="pb-mod-arm-val" style="text-align:right;color:#fbbf24">${demoModifiers.armSlotOffsetDeg >= 0 ? '+' : ''}${Math.round(demoModifiers.armSlotOffsetDeg)}°</span>
+            </div>
+            <div style="display:grid;grid-template-columns:104px 1fr 36px;align-items:center;gap:4px;font-size:10px">
+              <span>体幹傾き補正:</span>
+              <input id="pb-mod-tilt" type="range" min="-25" max="25" value="${Math.round(demoModifiers.torsoTiltOffsetDeg)}" style="accent-color:#10b981;cursor:pointer" />
+              <span id="pb-mod-tilt-val" style="text-align:right;color:#fbbf24">${demoModifiers.torsoTiltOffsetDeg >= 0 ? '+' : ''}${Math.round(demoModifiers.torsoTiltOffsetDeg)}°</span>
+            </div>
+          </div>
+
+          <!-- ⑤ ユニフォーム ＆ 背番号 リアルタイム反映テスト -->
+          <div style="background:rgba(30,41,59,0.85);padding:5px 7px;border-radius:6px;border:1px solid #334155;display:flex;flex-direction:column;gap:4px">
+            <div style="color:#f9a8d4;font-weight:700">⑤ ユニフォーム＆背番号 リアルタイム変更実証:</div>
+            <div style="display:flex;gap:3px;align-items:center">
+              <span style="font-size:10px;color:#cbd5e1;width:44px">背番号:</span>
+              <button class="pb-num-btn" data-act="pb-set-jersey" data-num="1" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 1 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 1 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#1</button>
+              <button class="pb-num-btn" data-act="pb-set-jersey" data-num="10" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 10 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 10 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#10</button>
+              <button class="pb-num-btn" data-act="pb-set-jersey" data-num="11" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 11 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 11 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#11</button>
+              <button class="pb-num-btn" data-act="pb-set-jersey" data-num="18" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoJerseyNumber === 18 ? '#f59e0b' : '#475569'};background:${demoJerseyNumber === 18 ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:800">#18</button>
+            </div>
+            <div style="display:flex;gap:3px;align-items:center">
+              <span style="font-size:10px;color:#cbd5e1;width:44px">柄3種:</span>
+              <button class="pb-pat-btn" data-act="pb-set-pattern" data-pat="NORMAL" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoUniformPattern === 'NORMAL' ? '#f59e0b' : '#475569'};background:${demoUniformPattern === 'NORMAL' ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px">無地</button>
+              <button class="pb-pat-btn" data-act="pb-set-pattern" data-pat="PINSTRIPE" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoUniformPattern === 'PINSTRIPE' ? '#f59e0b' : '#475569'};background:${demoUniformPattern === 'PINSTRIPE' ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px">縦じま</button>
+              <button class="pb-pat-btn" data-act="pb-set-pattern" data-pat="ACCENT_LINE" style="flex:1;padding:2px 4px;border-radius:4px;border:1px solid ${demoUniformPattern === 'ACCENT_LINE' ? '#f59e0b' : '#475569'};background:${demoUniformPattern === 'ACCENT_LINE' ? '#1e40af' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px">中央ライン</button>
+            </div>
+            <div style="display:flex;gap:3px;align-items:center">
+              <span style="font-size:10px;color:#cbd5e1;width:44px">配色:</span>
+              <button class="pb-col-btn" data-act="pb-set-color" data-col="SEIUN" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'SEIUN' ? '#f59e0b' : '#475569'};background:#1e3a8a;color:#fff;cursor:pointer;font-size:9.5px">白×濃紺</button>
+              <button class="pb-col-btn" data-act="pb-set-color" data-col="CRIMSON" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'CRIMSON' ? '#f59e0b' : '#475569'};background:#881337;color:#fff;cursor:pointer;font-size:9.5px">生成×臙脂</button>
+              <button class="pb-col-btn" data-act="pb-set-color" data-col="SKY" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'SKY' ? '#f59e0b' : '#475569'};background:#0284c7;color:#fff;cursor:pointer;font-size:9.5px">水色×紺</button>
+              <button class="pb-col-btn" data-act="pb-set-color" data-col="GOLD" style="flex:1;padding:2px 3px;border-radius:4px;border:1px solid ${demoColorPreset === 'GOLD' ? '#f59e0b' : '#475569'};background:#111827;color:#fde047;cursor:pointer;font-size:9.5px">白×黒金</button>
+            </div>
+            <button id="pb-mask-btn" data-act="pb-toggle-mask" style="margin-top:2px;padding:4px 6px;border-radius:5px;border:1px solid ${demoColorMaskMode ? '#ec4899' : '#64748b'};background:${demoColorMaskMode ? '#831843' : '#0f172a'};color:#fdf2f8;cursor:pointer;font-size:10px;font-weight:800">
+              🎨 部位別カラーIDマスク表示: ${demoColorMaskMode ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        ` : `
+          <!-- 【タブ3】演出テスト -->
+          <!-- コールアウト＆特大得点 演出テスト（ワンクリックプレビュー） -->
+          <div style="background:rgba(30,41,59,0.85);padding:8px 10px;border-radius:6px;border:1px solid #eab308;box-shadow:0 0 12px rgba(234,179,8,0.25)">
+            <div class="dev-section-title" style="color:#fef08a;font-weight:900">コールアウト＆特大得点 演出テスト (ワンクリック即時プレビュー):</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:5px">
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="STRIKEOUT" style="border-color:#ef4444;background:#450a0a;color:#fecaca">三振</button>
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="WALK" style="border-color:#38bdf8;background:#0c4a6e;color:#bae6fd">四球</button>
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="DEADBALL" style="border-color:#f43f5e;background:#4c0519;color:#fecdd3">死球</button>
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="STRIKE" style="border-color:#eab308;background:#422006;color:#fef08a">ストライク</button>
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="BALL" style="border-color:#22c55e;background:#052e16;color:#bbf7d0">ボール</button>
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="FOUL" style="border-color:#a855f7;background:#3b0764;color:#e9d5ff">ファウル</button>
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="HIT" style="border-color:#06b6d4;background:#164e63;color:#a5f3fc">安打</button>
+              <button class="dev-pitch-btn" data-act="test-callout" data-kind="HOMERUN" style="border-color:#f59e0b;background:#78350f;color:#fde68a">本塁打</button>
+              <button class="dev-pitch-btn" data-act="test-big-score" data-score-type="pushout" style="grid-column:span 2;border-color:#facc15;background:linear-gradient(135deg,#1e3a8a,#0f172a);color:#fef08a;font-weight:900;padding:6px">特大スコア (押し出し得点)</button>
+              <button class="dev-pitch-btn" data-act="test-big-score" data-score-type="timely" style="grid-column:span 2;border-color:#facc15;background:linear-gradient(135deg,#1e3a8a,#0f172a);color:#fef08a;font-weight:900;padding:6px">特大スコア (タイムリー得点)</button>
+            </div>
+          </div>
+
+          <!-- 球種・弾道テスト（物理投球/打撃） -->
+          <div style="background:rgba(30,41,59,0.85);padding:8px 10px;border-radius:6px;border:1px solid #334155">
+            <div class="dev-section-title">⚡ 球種・弾道テスト (物理投球/打撃):</div>
+            <div class="dev-pitch-grid">
+              <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="FOUR_SEAM" data-hit="false">⚾ 146k 直球</button>
+              <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="SLIDER" data-hit="false">🌪️ 134k スライダ</button>
+              <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="CURVE" data-hit="false">🌈 116k カーブ</button>
+              <button class="dev-pitch-btn" data-act="trigger-demo" data-pitch="FORK" data-hit="false">⚡ 130k フォーク</button>
+              <button class="dev-pitch-btn hit" style="grid-column:span 2" data-act="trigger-demo" data-pitch="FOUR_SEAM" data-hit="true">🏏 打撃一閃 (ヒット)</button>
+            </div>
+          </div>
+
+          <!-- 守備シフト5種 確認切替 -->
+          <div style="background:rgba(30,41,59,0.85);padding:6px 8px;border-radius:6px;border:1px solid #334155">
+            <div class="dev-section-title">🛡️ 守備シフト表示切替 (全5種テスト):</div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:4px">
+              <button data-act="set-shift" data-val="NORMAL" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'NORMAL' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'NORMAL' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">通常</button>
+              <button data-act="set-shift" data-val="FORWARD" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'FORWARD' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'FORWARD' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">前進守備</button>
+              <button data-act="set-shift" data-val="DOUBLE_PLAY" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'DOUBLE_PLAY' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'DOUBLE_PLAY' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">併殺</button>
+              <button data-act="set-shift" data-val="DEEP_OUTFIELD" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'DEEP_OUTFIELD' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'DEEP_OUTFIELD' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">長打警戒</button>
+              <button data-act="set-shift" data-val="BUNT_DEFENSE" style="padding:4px 2px;border-radius:4px;border:1px solid ${m.defenseShift === 'BUNT_DEFENSE' ? '#38bdf8' : '#475569'};background:${m.defenseShift === 'BUNT_DEFENSE' ? '#0369a1' : '#0f172a'};color:#fff;cursor:pointer;font-size:10px;font-weight:700">バント警戒</button>
+            </div>
+          </div>
+        `}
       </div>
+    </div>
     </div>
   </div>
 
@@ -1807,6 +1989,19 @@ export function mountMatch3D(): void {
     demoModifiers.torsoTiltOffsetDeg = v;
     return `${v >= 0 ? '+' : ''}${Math.round(v)}°`;
   });
+
+  // 投手パラメータスライダーのバインド
+  const pitcherSliders = document.querySelectorAll('input[data-act="pitcher-param-slider"]');
+  pitcherSliders.forEach((sl) => {
+    sl.addEventListener('input', (e) => {
+      const inputEl = e.currentTarget as HTMLInputElement;
+      const param = inputEl.getAttribute('data-param') as keyof PitcherDevParams;
+      if (param && param in devPitcherParams) {
+        (devPitcherParams as any)[param] = parseInt(inputEl.value, 10);
+        requestRender();
+      }
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1975,6 +2170,43 @@ registerActions({
 
   'toggle-form-editor': () => {
     isFormEditorOpen = !isFormEditorOpen;
+    requestRender();
+  },
+
+  'set-dev-tab': (el: HTMLElement) => {
+    const tab = el.getAttribute('data-tab') as DevModalTab;
+    if (tab) {
+      devModalActiveTab = tab;
+      requestRender();
+    }
+  },
+
+  'apply-pitcher-preset': (el: HTMLElement) => {
+    const preset = el.getAttribute('data-preset');
+    if (preset === 'BALANCED') {
+      devPitcherParams = { arm: 50, form: 50, control: 50, breaking: 50, stamina: 50, guts: 50, condition: 0, throws: 'R' };
+    } else if (preset === 'ACE') {
+      devPitcherParams = { arm: 85, form: 80, control: 75, breaking: 75, stamina: 80, guts: 75, condition: 2, throws: 'R' };
+    } else if (preset === 'WILD') {
+      devPitcherParams = { arm: 95, form: 85, control: 25, breaking: 35, stamina: 65, guts: 80, condition: 0, throws: 'R' };
+    } else if (preset === 'CRAFTY') {
+      devPitcherParams = { arm: 40, form: 45, control: 85, breaking: 80, stamina: 70, guts: 65, condition: 1, throws: 'L' };
+    }
+    requestRender();
+  },
+
+  'toggle-dev-pitcher-throws': () => {
+    devPitcherParams.throws = devPitcherParams.throws === 'R' ? 'L' : 'R';
+    requestRender();
+  },
+
+  'run-5inn-simulation': () => {
+    devSimResult = simulateFiveInnings(devPitcherParams);
+    requestRender();
+  },
+
+  'run-10match-simulation': () => {
+    devSimResult = simulateMultipleMatches(devPitcherParams, 10);
     requestRender();
   },
 
