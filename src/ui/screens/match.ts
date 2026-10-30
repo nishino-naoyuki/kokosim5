@@ -1170,49 +1170,55 @@ export function renderMatchScreen(): string {
 
           <!-- 5. シミュレーション結果カード -->
           ${devSimResult ? `
-          <div style="background:rgba(15,23,42,0.95);border:1.5px solid #eab308;border-radius:8px;padding:10px 12px;box-shadow:0 0 16px rgba(234,179,8,0.25)">
-            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:5px;margin-bottom:8px">
+          <div style="background:rgba(15,23,42,0.95);border:1.5px solid #eab308;border-radius:8px;padding:8px 10px;box-shadow:0 0 16px rgba(234,179,8,0.25)">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:4px;margin-bottom:6px">
               <span style="font-weight:900;color:#fef08a;font-size:11.5px">
                 📊 ${devSimResult.innings}回（${devSimResult.innings * 3}アウト）結果 [ ${devSimResult.matches === 1 ? '1試合' : `${devSimResult.matches}試合の平均`} ]
               </span>
               <span style="font-size:10.5px;color:#94a3b8">最高: ${devSimResult.maxSpeedKmh}km/h</span>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:5px;text-align:center">
-              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
-                <div style="font-size:9px;color:#94a3b8">総投球数 (回平均)</div>
-                <div style="font-size:14px;font-weight:900;color:#f8fafc">${devSimResult.pitches} <span style="font-size:9.5px;color:#94a3b8">(${devSimResult.pitchesPerInning}/回)</span></div>
+            <!-- 上段：投球テンポ・制球率・被打率・失点 -->
+            <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;text-align:center;margin-bottom:4px">
+              <div style="background:#1e293b;padding:4px 2px;border-radius:4px">
+                <div style="font-size:8.5px;color:#94a3b8">総投球数</div>
+                <div style="font-size:13px;font-weight:900;color:#f8fafc">${devSimResult.pitches} <span style="font-size:8.5px;color:#94a3b8">(${devSimResult.pitchesPerInning}/回)</span></div>
               </div>
-              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
-                <div style="font-size:9px;color:#94a3b8">ストライク率</div>
-                <div style="font-size:14px;font-weight:900;color:#38bdf8">${devSimResult.strikeRate}%</div>
+              <div style="background:#1e293b;padding:4px 2px;border-radius:4px">
+                <div style="font-size:8.5px;color:#94a3b8">ストライク率</div>
+                <div style="font-size:13px;font-weight:900;color:#38bdf8">${devSimResult.strikeRate}%</div>
               </div>
-              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
-                <div style="font-size:9px;color:#94a3b8">失点 (防御率換算)</div>
-                <div style="font-size:14px;font-weight:900;color:#ef4444">${devSimResult.runs}点 <span style="font-size:9.5px;color:#fca5a5">(ERA ${devSimResult.era})</span></div>
-              </div>
-              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
-                <div style="font-size:9px;color:#94a3b8">被安打 (単/二/三/本)</div>
-                <div style="font-size:13px;font-weight:900;color:#facc15">
-                  ${devSimResult.hits}本 <span style="font-size:9px;color:#94a3b8">(${devSimResult.singles}/${devSimResult.doubles}/${devSimResult.triples}/${devSimResult.homeRuns})</span>
+              <div style="background:#1e293b;padding:4px 2px;border-radius:4px">
+                <div style="font-size:8.5px;color:#94a3b8">被安打 (単/二/三/本)</div>
+                <div style="font-size:12px;font-weight:900;color:#facc15">
+                  ${devSimResult.hits}本 <span style="font-size:8.5px;color:#94a3b8">(${devSimResult.singles}/${devSimResult.doubles}/${devSimResult.triples}/${devSimResult.homeRuns})</span>
                 </div>
               </div>
-              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
-                <div style="font-size:9px;color:#94a3b8">与四球 (BB)</div>
-                <div style="font-size:14px;font-weight:900;color:#a78bfa">${devSimResult.walks}個</div>
+              <div style="background:#1e293b;padding:4px 2px;border-radius:4px">
+                <div style="font-size:8.5px;color:#94a3b8">失点 (防御率)</div>
+                <div style="font-size:13px;font-weight:900;color:#ef4444">${devSimResult.runs}点 <span style="font-size:8.5px;color:#fca5a5">(ERA ${devSimResult.era})</span></div>
               </div>
-              <div style="background:#1e293b;padding:5px 4px;border-radius:5px">
-                <div style="font-size:9px;color:#94a3b8">与死球 (HBP)</div>
-                <div style="font-size:14px;font-weight:900;color:#f43f5e">${devSimResult.deadBalls}個</div>
+            </div>
+            <!-- 下段：奪三振（K9）・与四球・与死球 -->
+            <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:4px;text-align:center">
+              <div style="background:#0f3a2c;border:1px solid #059669;padding:5px 4px;border-radius:4px">
+                <div style="font-size:9px;color:#6ee7b7;font-weight:700">奪三振 (K / 奪三振率)</div>
+                <div style="font-size:14px;font-weight:900;color:#34d399">
+                  ${devSimResult.strikeouts}個 <span style="font-size:10px;color:#a7f3d0">(K/9: ${devSimResult.k9})</span>
+                </div>
               </div>
-              <div style="background:#1e293b;padding:5px 4px;border-radius:5px;grid-column:span 3">
-                <div style="font-size:9px;color:#94a3b8">奪三振 (K)</div>
-                <div style="font-size:14px;font-weight:900;color:#34d399">${devSimResult.strikeouts}個</div>
+              <div style="background:#281b3d;border:1px solid #7c3aed;padding:5px 4px;border-radius:4px">
+                <div style="font-size:9px;color:#c4b5fd;font-weight:700">与四球 (BB)</div>
+                <div style="font-size:14px;font-weight:900;color:#c084fc">${devSimResult.walks}個</div>
+              </div>
+              <div style="background:#3b131e;border:1px solid #e11d48;padding:5px 4px;border-radius:4px">
+                <div style="font-size:9px;color:#fda4af;font-weight:700">与死球 (HBP)</div>
+                <div style="font-size:14px;font-weight:900;color:#fb7185">${devSimResult.deadBalls}個</div>
               </div>
             </div>
           </div>
           ` : `
           <div style="background:rgba(15,23,42,0.6);border:1px dashed #475569;border-radius:8px;padding:12px;text-align:center;color:#94a3b8;font-size:10.5px">
-            💡 上のボタンを押すと、画面描画を省いて5回（15アウト）の投球を高速計算し、四死球・被安打・失点等の結果を表示します。
+            💡 上のボタンを押すと、画面描画を省いて9回（27アウト）の投球を高速計算し、奪三振・四死球・被安打・失点等の結果を表示します。
           </div>
           `}
         ` : devModalActiveTab === 'FORM_EDITOR' ? `

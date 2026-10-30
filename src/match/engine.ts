@@ -1132,6 +1132,7 @@ export interface SimResult {
   runs: number;
   earnedRuns: number;
   strikeouts: number;
+  k9: number; // 奪三振率 (K/9)
   era: number;
   maxSpeedKmh: number;
 }
@@ -1308,6 +1309,7 @@ export function simulateInnings(input: SimPitcherInput, targetInnings = 9, rng?:
   const hits = singles + doubles + triples + homeRuns;
   const strikeRate = totalPitches > 0 ? (strikes / totalPitches) * 100 : 0;
   const era = (runs * 9) / targetInnings;
+  const k9 = (strikeouts * 9) / targetInnings;
   const maxSpeedKmh = Math.round(pitchVelocity(input.arm, input.form, input.traits || []));
 
   return {
@@ -1328,6 +1330,7 @@ export function simulateInnings(input: SimPitcherInput, targetInnings = 9, rng?:
     runs,
     earnedRuns: runs,
     strikeouts,
+    k9: Number(k9.toFixed(2)),
     era: Number(era.toFixed(2)),
     maxSpeedKmh,
   };
@@ -1368,6 +1371,7 @@ export function simulateMultipleMatches(input: SimPitcherInput, count = 10, targ
     runs: avg((r) => r.runs),
     earnedRuns: avg((r) => r.earnedRuns),
     strikeouts: avg((r) => r.strikeouts),
+    k9: Number((results.reduce((sum, r) => sum + r.k9, 0) / count).toFixed(2)),
     era: Number((results.reduce((sum, r) => sum + r.era, 0) / count).toFixed(2)),
     maxSpeedKmh: results[0].maxSpeedKmh,
   };
