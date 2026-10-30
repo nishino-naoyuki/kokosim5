@@ -254,9 +254,9 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
   );
 
   // コース判定（ストライクゾーン vs ボールゾーン）
-  // 高校野球の平均打者相手に、5回で ctrl=0で約10四球、ctrl=50で約3.5四球、ctrl=100で約1.5四球となるバランス
+  // 高校野球の平均打者相手に、9回（27アウト）で ctrl=0で約10四球、ctrl=50で約3.5〜4四球、ctrl=100で約1.5四球となるバランス
   const ctrl = pitcher.abilities.control;
-  const strikeProbability = clamp(0.53 + (ctrl - 50) * 0.0022 - (1 - staminaRatio) * 0.14, 0.36, 0.63);
+  const strikeProbability = clamp(0.585 + (ctrl - 50) * 0.0022 - (1 - staminaRatio) * 0.12, 0.44, 0.66);
   const inStrikeZone = rng.chance(strikeProbability);
   const zone: TrackingStats['pitchZone'] = inStrikeZone
     ? rng.pick(['CENTER', 'HIGH_IN', 'HIGH_OUT', 'LOW_IN', 'LOW_OUT'])
@@ -306,16 +306,16 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
   // -------------------------------------------------------------------------
   const batterEye = batter.abilities.eye ?? 50;
   // コントロールが高いほどボール球がゾーン際どいコースに外れ、低いほど大きく外れる
-  const ballSharpness = (ctrl - 50) * 0.0012;
+  const ballSharpness = (ctrl - 50) * 0.0014;
   // 打者の選球眼（eye）が良いほどボール球に手を出さず、悪い（悪球打ち）ほど振ってしまう
   const eyeFactor = (50 - batterEye) * 0.0030;
   // カウントに応じた選球補正（3ボール時は見極め、2ストライク時はカット・警戒）
-  const countBallSwingBonus = count.balls === 3 ? -0.12 : count.strikes === 2 ? 0.10 : 0;
-  const baseBallSwingProb = clamp(0.20 + ballSharpness + eyeFactor + countBallSwingBonus, 0.04, 0.40);
+  const countBallSwingBonus = count.balls === 3 ? -0.14 : count.strikes === 2 ? 0.10 : 0;
+  const baseBallSwingProb = clamp(0.22 + ballSharpness + eyeFactor + countBallSwingBonus, 0.06, 0.40);
 
   let swingProb = inStrikeZone
     ? clamp(
-        0.66 +
+        0.67 +
           (batterEye - 50) * 0.002 +
           (count.strikes === 2 ? 0.12 : 0) -
           (count.balls === 3 && count.strikes === 0 ? 0.35 : 0),
@@ -1204,7 +1204,7 @@ export function createTestPitcher(input: SimPitcherInput): Player {
   };
 }
 
-export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResult {
+export function simulateInnings(input: SimPitcherInput, targetInnings = 9, rng?: Rng): SimResult {
   const simRng = rng || new Rng(Date.now() ^ (Math.random() * 0x7fffffff));
   const oppRoster = Array.from({ length: 9 }, (_, i) => createAverageBatter(i + 1));
   const testPitcher = createTestPitcher(input);
@@ -1226,7 +1226,7 @@ export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResul
   const state = createLiveMatch({
     matchId: `sim-${Date.now()}`,
     tournamentTitle: 'シミュレーション検証',
-    roundName: '5回戦',
+    roundName: `${targetInnings}回戦`,
     stadium: defaultStadium,
     teamA: {
       id: 'opp-team',
@@ -1258,9 +1258,11 @@ export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResul
   let strikeouts = 0;
   let runs = 0;
   let completedOuts = 0;
+  const targetOuts = targetInnings * 3;
+  const maxPitchesLimit = targetInnings * 45; // 9回なら約400球リミット
 
-  // 5回表＝計15アウト分を投球
-  while (completedOuts < 15 && totalPitches < 250) {
+  // targetInnings（9回＝計27アウト）を投球
+  while (completedOuts < targetOuts && totalPitches < maxPitchesLimit) {
     // 常に表（相手打線 vs テスト投手）
     state.isBottom = false;
 
@@ -1305,14 +1307,14 @@ export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResul
 
   const hits = singles + doubles + triples + homeRuns;
   const strikeRate = totalPitches > 0 ? (strikes / totalPitches) * 100 : 0;
-  const era = (runs * 9) / 5;
+  const era = (runs * 9) / targetInnings;
   const maxSpeedKmh = Math.round(pitchVelocity(input.arm, input.form, input.traits || []));
 
   return {
     matches: 1,
-    innings: 5,
+    innings: targetInnings,
     pitches: totalPitches,
-    pitchesPerInning: Number((totalPitches / 5).toFixed(1)),
+    pitchesPerInning: Number((totalPitches / targetInnings).toFixed(1)),
     strikes,
     balls,
     strikeRate: Number(strikeRate.toFixed(1)),
@@ -1331,10 +1333,18 @@ export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResul
   };
 }
 
-export function simulateMultipleMatches(input: SimPitcherInput, count = 10): SimResult {
+export function simulateNineInnings(input: SimPitcherInput, rng?: Rng): SimResult {
+  return simulateInnings(input, 9, rng);
+}
+
+export function simulateFiveInnings(input: SimPitcherInput, rng?: Rng): SimResult {
+  return simulateInnings(input, 5, rng);
+}
+
+export function simulateMultipleMatches(input: SimPitcherInput, count = 10, targetInnings = 9): SimResult {
   const results: SimResult[] = [];
   for (let i = 0; i < count; i++) {
-    results.push(simulateFiveInnings(input));
+    results.push(simulateInnings(input, targetInnings));
   }
 
   const avg = (fn: (r: SimResult) => number) =>
@@ -1342,7 +1352,7 @@ export function simulateMultipleMatches(input: SimPitcherInput, count = 10): Sim
 
   return {
     matches: count,
-    innings: 5,
+    innings: targetInnings,
     pitches: avg((r) => r.pitches),
     pitchesPerInning: avg((r) => r.pitchesPerInning),
     strikes: avg((r) => r.strikes),

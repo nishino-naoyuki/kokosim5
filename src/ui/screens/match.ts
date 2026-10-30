@@ -13,7 +13,7 @@ import {
   issueIntentionalWalk,
   pinchHit,
   sendMessenger,
-  simulateFiveInnings,
+  simulateNineInnings,
   simulateMultipleMatches,
   stepPitch,
   type SimResult,
@@ -1070,7 +1070,7 @@ export function renderMatchScreen(): string {
         <!-- タブ切り替えバー -->
         <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:4px;background:rgba(30,41,59,0.8);padding:3px;border-radius:6px;border:1px solid #334155">
           <button data-act="set-dev-tab" data-tab="SIMULATION" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'SIMULATION' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'SIMULATION' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'SIMULATION' ? '#fff' : '#94a3b8'};cursor:pointer">
-            ⚾ 投手能力・5回検証
+            ⚾ 投手能力・9回検証
           </button>
           <button data-act="set-dev-tab" data-tab="FORM_EDITOR" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'FORM_EDITOR' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'FORM_EDITOR' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'FORM_EDITOR' ? '#fff' : '#94a3b8'};cursor:pointer">
             🕺 フォームエディタ
@@ -1095,7 +1095,7 @@ export function renderMatchScreen(): string {
               </div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:9.5px;color:#94a3b8">対戦相手 (5イニング・15アウト)</div>
+              <div style="font-size:9.5px;color:#94a3b8">対戦相手 (9イニング・27アウト)</div>
               <div style="font-size:12px;font-weight:800;color:#38bdf8">平均高校（ALL 50 / C相当）</div>
             </div>
           </div>
@@ -1160,11 +1160,11 @@ export function renderMatchScreen(): string {
 
           <!-- 4. シミュレーションボタン -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <button data-act="run-5inn-simulation" style="background:linear-gradient(135deg, #0284c7, #0369a1);border:1px solid #38bdf8;color:#fff;padding:8px 4px;border-radius:6px;font-weight:900;font-size:11.5px;cursor:pointer;box-shadow:0 2px 8px rgba(2,132,199,0.3)">
-              ▶ 5回シミュレート (1試合)
+            <button data-act="run-9inn-simulation" style="background:linear-gradient(135deg, #0284c7, #0369a1);border:1px solid #38bdf8;color:#fff;padding:8px 4px;border-radius:6px;font-weight:900;font-size:11.5px;cursor:pointer;box-shadow:0 2px 8px rgba(2,132,199,0.3)">
+              ▶ 9回シミュレート (1試合)
             </button>
             <button data-act="run-10match-simulation" style="background:linear-gradient(135deg, #059669, #047857);border:1px solid #34d399;color:#fff;padding:8px 4px;border-radius:6px;font-weight:900;font-size:11.5px;cursor:pointer;box-shadow:0 2px 8px rgba(5,150,105,0.3)">
-              🔁 10試合平均で検証
+              🔁 10試合平均で検証 (9回)
             </button>
           </div>
 
@@ -1173,7 +1173,7 @@ export function renderMatchScreen(): string {
           <div style="background:rgba(15,23,42,0.95);border:1.5px solid #eab308;border-radius:8px;padding:10px 12px;box-shadow:0 0 16px rgba(234,179,8,0.25)">
             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:5px;margin-bottom:8px">
               <span style="font-weight:900;color:#fef08a;font-size:11.5px">
-                📊 5回（15アウト）結果 [ ${devSimResult.matches === 1 ? '1試合' : `${devSimResult.matches}試合の平均`} ]
+                📊 ${devSimResult.innings}回（${devSimResult.innings * 3}アウト）結果 [ ${devSimResult.matches === 1 ? '1試合' : `${devSimResult.matches}試合の平均`} ]
               </span>
               <span style="font-size:10.5px;color:#94a3b8">最高: ${devSimResult.maxSpeedKmh}km/h</span>
             </div>
@@ -2230,13 +2230,18 @@ registerActions({
     requestRender();
   },
 
+  'run-9inn-simulation': () => {
+    devSimResult = simulateNineInnings(devPitcherParams);
+    requestRender();
+  },
+
   'run-5inn-simulation': () => {
-    devSimResult = simulateFiveInnings(devPitcherParams);
+    devSimResult = simulateNineInnings(devPitcherParams);
     requestRender();
   },
 
   'run-10match-simulation': () => {
-    devSimResult = simulateMultipleMatches(devPitcherParams, 10);
+    devSimResult = simulateMultipleMatches(devPitcherParams, 10, 9);
     requestRender();
   },
 
