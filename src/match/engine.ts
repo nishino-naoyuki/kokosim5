@@ -313,14 +313,23 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
   const countBallSwingBonus = count.balls === 3 ? -0.14 : count.strikes === 2 ? 0.10 : 0;
   const baseBallSwingProb = clamp(0.22 + ballSharpness + eyeFactor + countBallSwingBonus, 0.06, 0.40);
 
+  // 2ストライク時: 遅球(ALL 0)は打者が見逃さず振る。豪速球・キレ(ALL 100)は手が出ず見逃し三振が増加
+  const velScore = clamp(0.55 * pitcher.abilities.arm + 0.45 * pitcher.abilities.form, 0, 100);
+  const breakScore = pitcher.abilities.breaking;
+  const ctrlScore = ctrl;
+  const pitcherStuff = breakScore * 0.50 + velScore * 0.35 + ctrlScore * 0.15;
+
+  const calledKDefenseBonus = (50 - pitcherStuff) * 0.0035;
+  const twoStrikeSwingBonus = count.strikes === 2 ? 0.16 + calledKDefenseBonus : 0;
+
   let swingProb = inStrikeZone
     ? clamp(
         0.67 +
           (batterEye - 50) * 0.002 +
-          (count.strikes === 2 ? 0.12 : 0) -
+          twoStrikeSwingBonus -
           (count.balls === 3 && count.strikes === 0 ? 0.35 : 0),
         0.30,
-        0.90,
+        0.98,
       )
     : baseBallSwingProb;
   const tactic = state.offenseTactic;
@@ -377,8 +386,15 @@ export function stepPitch(state: LiveMatchState, rng: Rng): PitchOutcome {
 
   // 2. スイングあり（コンタクト判定）
   const batterContact = batter.abilities.contact + (tactic === 'CONTACT' ? 25 : 0) - (tactic === 'POWER' ? 18 : 0);
-  const pitcherStuff = (ctrl + pitcher.abilities.breaking) / 2 + (pitchType !== 'ストレート' ? 10 : 0);
-  const contactProb = clamp(0.72 + (batterContact - pitcherStuff) * 0.003 - (zone === 'BALL' ? 0.28 : 0), 0.35, 0.94);
+
+  // 2ストライク時の決め球補正（空振り誘導）
+  const twoStrikeBonus = count.strikes === 2 ? (pitcherStuff - 50) * 0.0042 : 0;
+
+  // コンタクト確率（バットに当たる確率）
+  // ALL 50 => K率 約5.5、ALL 0 => K率 約1、ALL 100 => K率 約18
+  const contactDiff = (batterContact - pitcherStuff) * 0.0078;
+  const baseContact = zone === 'BALL' ? 0.68 : 0.88;
+  const contactProb = clamp(baseContact + contactDiff - twoStrikeBonus, 0.12, 0.99);
 
   if (!rng.chance(contactProb)) {
     // 空振り
@@ -1264,8 +1280,9 @@ export function simulateInnings(input: SimPitcherInput, targetInnings = 9, rng?:
 
   // targetInnings（9回＝計27アウト）を投球
   while (completedOuts < targetOuts && totalPitches < maxPitchesLimit) {
-    // 常に表（相手打線 vs テスト投手）
+    // 常に表（相手打線 vs テスト投手）・ゲームセット判定を抑止して指定回数を投げ切る
     state.isBottom = false;
+    state.isGameOver = false;
 
     const outcome = stepPitch(state, simRng);
     totalPitches++;
@@ -1298,8 +1315,9 @@ export function simulateInnings(input: SimPitcherInput, targetInnings = 9, rng?:
     completedOuts += outcome.outsAdded;
 
     // 3アウトチェンジが起きた場合のイニング進行
-    if (state.isBottom) {
+    if (state.isBottom || state.outs >= 3) {
       state.isBottom = false;
+      state.isGameOver = false;
       state.outs = 0;
       state.bases = { b1: null, b2: null, b3: null };
       state.inning++;
