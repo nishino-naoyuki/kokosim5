@@ -552,8 +552,8 @@ function solvePivotLegPinning(
   hipLocalPos: THREE.Vector3,
   pelvisPos: THREE.Vector3,
   pelvisQ: THREE.Quaternion,
-  upperLen: number = 0.41,
-  lowerLen: number = 0.39,
+  upperLen: number = 0.46,
+  lowerLen: number = 0.44,
   isSub: boolean = false,
 ): { hipQ: THREE.Quaternion; kneeFlex: number; ankleQ: THREE.Quaternion } {
   // 骨盤の現在位置と回転から、軸足股関節（右股関節）のワールド座標を正確に算出
@@ -561,17 +561,10 @@ function solvePivotLegPinning(
 
   // マウンド地面接地高さ（土の上に靴底・爪先が接地 = 0.08m）
   const footY = 0.08;
-  const maxReach = upperLen + lowerLen - 0.008;
+  const maxReach = upperLen + lowerLen - 0.005;
 
-  // 股関節から足首までの最大到達可能水平距離（これ以上離れると足が空中に引っ張られるため、地面を前方へ擦って追従する）
-  const dy = footY - _tmpHipWorld.y;
-  const maxDz = Math.sqrt(Math.max(0.01, maxReach * maxReach - dy * dy));
-  const minFootZ = _tmpHipWorld.z - maxDz;
-
-  // 軸足はプレート(Z <= 0.0)に固定。骨盤が本塁へ前進して脚の長さを超えた時のみ、地面(Y=0.08m)を擦って自然に前方へ引きずる(Toe Drag)！
-  // これにより、放球(t=0.68)まで絶対に軸足が空中に跳ね上がらず、地面に100%密着接地！
-  const targetZ = Math.max(0.0, minFootZ);
-  const targetFootWorld = new THREE.Vector3(_tmpHipWorld.x, footY, targetZ);
+  // 軸足は放球(t=0.68)までプレート(Z=0.0)にガッチリ固定！後方へピンと一直線に伸ばす！
+  const targetFootWorld = new THREE.Vector3(_tmpHipWorld.x, footY, 0.0);
 
   // 股関節から足首へのベクトル
   _tmpFootDirWorld.copy(targetFootWorld).sub(_tmpHipWorld);
@@ -608,8 +601,8 @@ function solvePivotLegPinning(
     hipQ = swivelQ.multiply(hipQ);
   }
 
-  // 接地足首角度（プレート・地面に靴底または爪先が接地）
-  const anklePitch = Math.max(-45, Math.min(10, kneeFlexDeg * 0.4 - 25));
+  // 接地足首角度（プレートに爪先・靴底が接地）
+  const anklePitch = Math.max(-50, Math.min(10, kneeFlexDeg * 0.4 - 30));
   const ankleQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), anklePitch * DEG);
 
   return { hipQ, kneeFlex: kneeFlexDeg, ankleQ };
@@ -625,8 +618,8 @@ function solveLeftStrideGroundContact(
   pelvisPos: THREE.Vector3,
   pelvisQ: THREE.Quaternion,
   targetFootWorld: THREE.Vector3,
-  upperLen: number = 0.42,
-  lowerLen: number = 0.39,
+  upperLen: number = 0.46,
+  lowerLen: number = 0.44,
   isSub: boolean = false,
 ): { hipQ: THREE.Quaternion; kneeFlex: number; ankleQ: THREE.Quaternion } {
   _tmpHipWorld.copy(hipLocalPos).applyQuaternion(pelvisQ).add(pelvisPos);
@@ -710,10 +703,10 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
   // ※ オーバースローは頭上垂直やや右側(X=+0.34m)に位置させ、背面カメラから頭の右横にくっきり腕が見えるよう修正！
   let armRelU = new THREE.Vector3(0.50, 0.84, 0.18); // OVERHAND_HIGH: 頭上やや右外側から振り下ろす正統派フォーム！
   let armRelV = armRelU.clone();
-  let relPelvisPos = [0.0, 0.76, 1.00];
+  let relPelvisPos = [0.0, 0.58, 0.78];
   let relPelvisRot: [number, number, number] = [18, -10, -2];
   let relSpineRot: [number, number, number] = [16, -8, -2];
-  let folPelvisPos = [0.0, 0.76, 1.04];
+  let folPelvisPos = [0.0, 0.64, 0.88];
   let folPelvisRot: [number, number, number] = [36, -26, 6];
   let folSpineRot: [number, number, number] = [30, -26, 6];
 
@@ -921,9 +914,9 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: true,
   };
 
-  // ⑧ 踏み出し足着地 (t=0.52)：左足がマウンドに力強く着地、軸足は地面を擦りながら追従
+  // ⑧ 踏み出し足着地 (t=0.52)：左足がマウンドに力強く着地、軸足はプレートに完全固定
   const p7: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.44 : isSide ? 0.72 : 0.74, isSub ? 0.72 : isSide ? 0.82 : 0.85),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.44 : 0.62, isSub ? 0.62 : 0.62),
     pelvisQ: toQuatFromEuler(isSub ? [20, 32, -30] : isSide ? [14, 36, -8] : [10, 35, 4]),
     spineQ: toQuatFromEuler(isSub ? [18, 20, -32] : isSide ? [12, 30, -8] : [10, 30, 4]),
     rShoulderQ: armTopR.q,
@@ -941,7 +934,7 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
 
   // ⑨ パワーL字トップ形成 (t=0.58)：骨盤が回転を開始し、右腕が直角のトップを形成
   const p8: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.40 : isSide ? 0.72 : 0.74, isSub ? 0.78 : isSide ? 0.88 : 0.90),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.40 : 0.60, isSub ? 0.68 : 0.68),
     pelvisQ: toQuatFromEuler(isSub ? [22, 16, -32] : isSide ? [16, 18, -6] : [12, 18, 4]),
     spineQ: toQuatFromEuler(isSub ? [20, 12, -34] : isSide ? [14, 14, -6] : [10, 16, 5]),
     rShoulderQ: armTopR.q,
@@ -957,9 +950,9 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: true,
   };
 
-  // ⑩ 最大外旋 MER (t=0.63)：腰と胸が本塁へ一気に開き、肘が先行して前腕が大きくしなる（軸足は地面に完全接地！）
+  // ⑩ 最大外旋 MER (t=0.63)：腰と胸が本塁へ一気に開き、肘が先行して前腕が大きくしなる（軸足はプレートにピンと一直線！）
   const p9: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.38 : isSide ? 0.72 : 0.74, isSub ? 0.83 : isSide ? 0.94 : 0.95),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.38 : 0.58, isSub ? 0.74 : 0.74),
     pelvisQ: toQuatFromEuler(isSub ? [22, 0, -34] : isSide ? [16, 0, -6] : [14, 0, 4]),
     spineQ: toQuatFromEuler(isSub ? [20, -4, -36] : isSide ? [14, -5, -6] : [10, -5, 6]),
     rShoulderQ: armMerR.q,
@@ -1330,11 +1323,12 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
     hipBone.add(hipJoint);
 
     const thighMesh = createCelMesh(thighGeo, pantsMat, 1.06);
-    thighMesh.position.set(0, -0.20, 0);
+    thighMesh.position.set(0, -0.22, 0);
+    thighMesh.scale.set(1.0, 1.12, 1.0);
     hipBone.add(thighMesh);
 
     const kneeBone = new THREE.Group();
-    kneeBone.position.set(0, -0.41, 0);
+    kneeBone.position.set(0, -0.46, 0);
     hipBone.add(kneeBone);
 
     const kneeJoint = createCelMesh(kneeJointGeo, pantsMat, 1.05);
@@ -1342,16 +1336,17 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
 
     // パンツの膝下ブラウジング部分
     const calfPants = createCelMesh(upperCalfGeo, pantsMat, 1.06);
-    calfPants.position.set(0, -0.095, 0);
+    calfPants.position.set(0, -0.105, 0);
     kneeBone.add(calfPants);
 
     // ストッキング（高校野球の2本ライン入りソックス）
     const sockMesh = createCelMesh(sockGeo, socksMat, 1.06);
-    sockMesh.position.set(0, -0.26, 0);
+    sockMesh.position.set(0, -0.29, 0);
+    sockMesh.scale.set(1.0, 1.12, 1.0);
     kneeBone.add(sockMesh);
 
     const ankleBone = new THREE.Group();
-    ankleBone.position.set(0, -0.39, 0);
+    ankleBone.position.set(0, -0.44, 0);
     kneeBone.add(ankleBone);
 
     const footMesh = createCelMesh(shoeGeo, cleatMat, 1.065);
@@ -1453,8 +1448,8 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
         new THREE.Vector3(0.084, -0.04, 0),
         pelvisBone.position,
         pelvisBone.quaternion,
-        0.41,
-        0.39,
+        0.46,
+        0.44,
         isSub,
       );
       rLeg.hipBone.quaternion.copy(pinned.hipQ);
@@ -1465,8 +1460,8 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
         new THREE.Vector3(0.084, -0.04, 0),
         pelvisBone.position,
         pelvisBone.quaternion,
-        0.41,
-        0.39,
+        0.46,
+        0.44,
         isSub,
       );
       const rawW = (clamped - pinEndT) / (blendEndT - pinEndT);
@@ -1481,19 +1476,20 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
     }
 
     // 左脚（踏み出し足）：着地(t >= 0.52)後はマウンドにガッチリ固定し、後退やめり込み・不自然な歪みを100%防止！
+    // 【ユーザー指摘対応】：ステップ幅をプロ・高校野球標準の6〜7歩分（約1.58m）へ拡大！
     if (clamped >= 0.52 && clamped <= 0.88) {
       const targetLFoot = isSub
-        ? new THREE.Vector3(-0.12, 0.08, 1.05)
+        ? new THREE.Vector3(-0.12, 0.08, 1.55)
         : isSide
-        ? new THREE.Vector3(-0.10, 0.08, 1.05)
-        : new THREE.Vector3(-0.08, 0.08, 1.08);
+        ? new THREE.Vector3(-0.10, 0.08, 1.55)
+        : new THREE.Vector3(-0.08, 0.08, 1.58);
       const planted = solveLeftStrideGroundContact(
         new THREE.Vector3(-0.084, -0.04, 0),
         pelvisBone.position,
         pelvisBone.quaternion,
         targetLFoot,
-        0.42,
-        0.39,
+        0.46,
+        0.44,
         isSub,
       );
       lLeg.hipBone.quaternion.copy(planted.hipQ);
