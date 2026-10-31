@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import {
   type PlayerStyleOptions,
   numToHex,
@@ -349,6 +349,28 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
   neckMesh.position.set(0, 0.22, 0);
   torsoGroup.add(neckMesh);
 
+  // ユニフォームの立体前立て＆アニメ胸ボタン（プロトタイプアニメパーツ）
+  const placketGeo = new THREE.BoxGeometry(0.026, 0.22, 0.008);
+  const placketMesh = createCelMesh(placketGeo, shirtPlainMat, 1.055);
+  placketMesh.position.set(0, 0.08, 0.108);
+  torsoGroup.add(placketMesh);
+
+  const buttonGeo = new THREE.CylinderGeometry(0.007, 0.007, 0.006, 12);
+  buttonGeo.rotateX(Math.PI / 2);
+  const buttonMat = createAnimeCelMaterial({ color: '#f8fafc', shadowTint: new THREE.Vector3(0.7, 0.7, 0.75) });
+  const btn1 = createCelMesh(buttonGeo, buttonMat, 1.06);
+  btn1.position.set(0, 0.14, 0.112);
+  const btn2 = createCelMesh(buttonGeo, buttonMat, 1.06);
+  btn2.position.set(0, 0.05, 0.112);
+  torsoGroup.add(btn1, btn2);
+
+  // ユニフォームの立体Vネック襟パーツ
+  const vCollarGeo = new THREE.CylinderGeometry(0.088, 0.096, 0.024, 28, 1, true, -Math.PI * 0.42, Math.PI * 0.84);
+  const vCollarMesh = createCelMesh(vCollarGeo, shirtPlainMat, 1.06);
+  vCollarMesh.position.set(0, 0.205, 0.012);
+  vCollarMesh.rotation.x = 0.14;
+  torsoGroup.add(vCollarMesh);
+
   // 骨盤・ベルトグループ（pelvis_open 回旋に同期）
   const pelvisGroup = new THREE.Group();
   rigRoot.add(pelvisGroup);
@@ -414,6 +436,55 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
   visorMesh.rotation.y = -Math.PI * 0.325;
   visorMesh.position.set(0, 0.038, 0.092);
   headGroup.add(visorMesh);
+
+  // ヘルメットの天ボタン
+  const capBtnGeo = new THREE.SphereGeometry(0.014, 16, 12);
+  const capBtn = createCelMesh(capBtnGeo, helmetMat, 1.055);
+  capBtn.position.set(0, 0.146, 0.012);
+  headGroup.add(capBtn);
+
+  // ヘルメット正面の立体校章エンブレム
+  const emblemGeo = new THREE.BoxGeometry(0.034, 0.036, 0.008);
+  const emblemMat = createAnimeCelMaterial({ color: '#f59e0b', shadowTint: new THREE.Vector3(0.7, 0.5, 0.2) });
+  const emblemMesh = createCelMesh(emblemGeo, emblemMat, 1.06);
+  emblemMesh.position.set(0, 0.082, 0.126);
+  emblemMesh.rotation.x = -0.15;
+  headGroup.add(emblemMesh);
+
+  // 【立体アニメ前髪パーツ】ヘルメットのツバ下から覗くシャープな毛束
+  const bangsGroup = new THREE.Group();
+  const hairMat = createAnimeCelMaterial({
+    color: '#1c1917',
+    shadowTint: new THREE.Vector3(0.5, 0.45, 0.5),
+  });
+
+  const bangCenterGeo = new THREE.ConeGeometry(0.019, 0.060, 4);
+  bangCenterGeo.rotateX(Math.PI);
+  bangCenterGeo.scale(1.0, 1.0, 0.45);
+  const bangCenter = createCelMesh(bangCenterGeo, hairMat, 1.06);
+  bangCenter.position.set(0, 0.038, 0.116);
+  bangCenter.rotation.x = 0.18;
+  bangsGroup.add(bangCenter);
+
+  const bangLeftGeo = new THREE.ConeGeometry(0.016, 0.052, 4);
+  bangLeftGeo.rotateX(Math.PI);
+  bangLeftGeo.scale(1.0, 1.0, 0.4);
+  const bangLeft = createCelMesh(bangLeftGeo, hairMat, 1.06);
+  bangLeft.position.set(-0.036, 0.040, 0.112);
+  bangLeft.rotation.x = 0.16;
+  bangLeft.rotation.z = -0.22;
+  bangsGroup.add(bangLeft);
+
+  const bangRightGeo = new THREE.ConeGeometry(0.016, 0.052, 4);
+  bangRightGeo.rotateX(Math.PI);
+  bangRightGeo.scale(1.0, 1.0, 0.4);
+  const bangRight = createCelMesh(bangRightGeo, hairMat, 1.06);
+  bangRight.position.set(0.036, 0.040, 0.112);
+  bangRight.rotation.x = 0.16;
+  bangRight.rotation.z = 0.22;
+  bangsGroup.add(bangRight);
+
+  headGroup.add(bangsGroup);
 
   // イヤーフラップ
   const earflapGeo = new THREE.BoxGeometry(0.034, 0.090, 0.080);

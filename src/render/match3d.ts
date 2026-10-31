@@ -18,7 +18,8 @@ export type CameraViewMode =
   | 'SIDE_3B_VIEW'
   | 'FRONT_SUB_VIEW'
   | 'IN_PLAY_WIDE'
-  | 'INFIELD_CLOSEUP';
+  | 'INFIELD_CLOSEUP'
+  | 'BATTER_FOCUS_VIEW';
 
 export interface Match3DScene {
   container: HTMLElement;
@@ -40,8 +41,15 @@ export interface Match3DScene {
   setPitcherModifiers: (mods: Partial<PitchFormModifiers>) => void;
   setPitcherUniform: (opts: Partial<PlayerStyleOptions>) => void;
   setPitcherColorMaskMode: (enabled: boolean) => void;
+  setBatterPhase: (phase: number) => void;
+  setBatterHandedness: (hands: 'R' | 'L') => void;
   setPlaybackSpeed: (speed: number) => void;
   playContinuousFormPreview: (
+    onPhaseUpdate?: (phase: number, stageLabel: string) => void,
+    onComplete?: () => void
+  ) => void;
+  playBatterSwingPreview: (
+    speed?: number,
     onPhaseUpdate?: (phase: number, stageLabel: string) => void,
     onComplete?: () => void
   ) => void;
@@ -781,6 +789,12 @@ export function initMatch3D(
       camera.position.set(4.2, 1.15, -13.5);
       cameraTarget = new THREE.Vector3(7.2, 0.45, -18.2);
       pitcher.setViewAngle?.('PITCH_VIEW');
+    } else if (mode === 'BATTER_FOCUS_VIEW') {
+      // 打者アニメーション検証用：打者の表情・ヘルメット・バット軌道を斜め前方至近距離から観察
+      camera.fov = 24;
+      camera.position.set(2.4, 1.35, -2.6);
+      cameraTarget = new THREE.Vector3(0.65, 1.15, 0.2);
+      pitcher.setViewAngle?.('PITCH_VIEW');
     }
     camera.updateProjectionMatrix();
     camera.lookAt(cameraTarget);
@@ -821,6 +835,19 @@ export function initMatch3D(
     pitcher.setColorMaskMode?.(enabled);
   }
 
+  function setBatterPhase(phase: number) {
+    if (currentTweenId !== null) {
+      cancelAnimationFrame(currentTweenId);
+      currentTweenId = null;
+    }
+    ball.visible = false;
+    batter.setPhase(phase);
+  }
+
+  function setBatterHandedness(hands: 'R' | 'L') {
+    batter.setHandedness(hands);
+  }
+
   function setPlaybackSpeed(speed: number) {
     playbackSpeed = Math.max(0.1, Math.min(2.0, speed));
   }
@@ -843,6 +870,17 @@ export function initMatch3D(
     return '⑮ フィニッシュ・守備復帰 (両足着地・捕球体勢)';
   }
 
+  function getBatterStageLabelForPhase(p: number): string {
+    if (p < 0.15) return '① 構え (Stance: 投手凝視・静止)';
+    if (p < 0.35) return '② タメ・前足上げ (Load: 軸足股関節への重心乗せ)';
+    if (p < 0.48) return '③ トップ形成 (Top: バットヘッド立ち・深い引き)';
+    if (p < 0.60) return '④ 踏み込み・腰回転始動 (Stride: 下半身先行・キネティックチェーン)';
+    if (p < 0.72) return '⑤ スイング加速 (Swing: インサイドアウト・しなり)';
+    if (p < 0.82) return '⑥ インパクト一閃！ (Impact: 前足ブロック・頭の残り)';
+    if (p < 0.92) return '⑦ 振り抜き・回転 (Follow: バット巻き付き)';
+    return '⑧ ハイフィニッシュ (Finish: 背中巻き付き・両手振り切り)';
+  }
+
   function playContinuousFormPreview(
     onPhaseUpdate?: (phase: number, stageLabel: string) => void,
     onComplete?: () => void
@@ -862,6 +900,48 @@ export function initMatch3D(
       pitcher.setPhase(effectivePhase);
       if (onPhaseUpdate) {
         onPhaseUpdate(effectivePhase, getStageLabelForPhase(effectivePhase));
+      }
+      if (progress < 1.0) {
+        currentTweenId = requestAnimationFrame(loop);
+      } else {
+        currentTweenId = null;
+        if (onComplete) onComplete();
+      }
+    }
+    currentTweenId = requestAnimationFrame(loop);
+  }
+
+  function playBatterSwingPreview(
+    speed: number = 1.0,
+    onPhaseUpdate?: (phase: number, stageLabel: string) => void,
+    onComplete?: () => void
+  ) {
+    if (currentTweenId !== null) cancelAnimationFrame(currentTweenId);
+    batter.setPhase(0);
+    const totalDurationMs = 1250 / speed;
+    const startTime = performance.now();
+
+    function loop(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(1.0, elapsed / totalDurationMs);
+
+      // 打者スイングの緩急：
+      // progress <= 0.45: 構え〜トップタメ (0.00 -> 0.43)
+      // progress > 0.45: 踏み込み〜インパクト〜フォロースルーを一気呵成にスイング！ (0.43 -> 1.00)
+      let phase = 0;
+      if (progress <= 0.45) {
+        const s = progress / 0.45;
+        const ease = Math.sin((s * Math.PI) / 2);
+        phase = 0.4316 * ease;
+      } else {
+        const s = (progress - 0.45) / 0.55;
+        const ease = Math.pow(s, 1.35);
+        phase = 0.4316 + (1.0 - 0.4316) * ease;
+      }
+
+      batter.setPhase(phase);
+      if (onPhaseUpdate) {
+        onPhaseUpdate(phase, getBatterStageLabelForPhase(phase));
       }
       if (progress < 1.0) {
         currentTweenId = requestAnimationFrame(loop);
@@ -1218,8 +1298,11 @@ export function initMatch3D(
     setPitcherModifiers,
     setPitcherUniform,
     setPitcherColorMaskMode,
+    setBatterPhase,
+    setBatterHandedness,
     setPlaybackSpeed,
     playContinuousFormPreview,
+    playBatterSwingPreview,
     playPitchAnimation,
     playDemoPitch,
     setRealisticPitchEasing,

@@ -60,8 +60,11 @@ const DEFENSE_SHIFT_LABELS: Record<DefenseShift, string> = {
 };
 
 // 案B：3D骨格ボーン連続フォーム ＆ フォームエディタ確認デモ用ステート
-type DevModalTab = 'SIMULATION' | 'FORM_EDITOR' | 'EFFECTS_TEST';
+type DevModalTab = 'SIMULATION' | 'FORM_EDITOR' | 'BATTER_EDITOR' | 'EFFECTS_TEST';
 let devModalActiveTab: DevModalTab = 'SIMULATION';
+let batterDemoPhase = 0.0;
+let batterDemoHandedness: 'R' | 'L' = 'R';
+let batterStageLabel = '① 構え (Stance: 投手凝視・静止)';
 
 interface PitcherDevParams {
   arm: number;
@@ -1068,12 +1071,15 @@ export function renderMatchScreen(): string {
         </div>
 
         <!-- タブ切り替えバー -->
-        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:4px;background:rgba(30,41,59,0.8);padding:3px;border-radius:6px;border:1px solid #334155">
+        <div style="display:grid;grid-template-columns:1.2fr 1.1fr 1.1fr 1fr;gap:4px;background:rgba(30,41,59,0.8);padding:3px;border-radius:6px;border:1px solid #334155">
           <button data-act="set-dev-tab" data-tab="SIMULATION" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'SIMULATION' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'SIMULATION' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'SIMULATION' ? '#fff' : '#94a3b8'};cursor:pointer">
-            ⚾ 投手能力・9回検証
+            ⚾ 投手検証
           </button>
           <button data-act="set-dev-tab" data-tab="FORM_EDITOR" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'FORM_EDITOR' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'FORM_EDITOR' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'FORM_EDITOR' ? '#fff' : '#94a3b8'};cursor:pointer">
-            🕺 フォームエディタ
+            🕺 投手フォーム
+          </button>
+          <button data-act="set-dev-tab" data-tab="BATTER_EDITOR" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'BATTER_EDITOR' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'BATTER_EDITOR' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'BATTER_EDITOR' ? '#fff' : '#94a3b8'};cursor:pointer">
+            💥 打者デモ
           </button>
           <button data-act="set-dev-tab" data-tab="EFFECTS_TEST" style="padding:6px 2px;font-size:10.5px;font-weight:800;border-radius:4px;border:1px solid ${devModalActiveTab === 'EFFECTS_TEST' ? '#38bdf8' : 'transparent'};background:${devModalActiveTab === 'EFFECTS_TEST' ? '#0369a1' : 'transparent'};color:${devModalActiveTab === 'EFFECTS_TEST' ? '#fff' : '#94a3b8'};cursor:pointer">
             ✨ 演出テスト
@@ -1346,6 +1352,77 @@ export function renderMatchScreen(): string {
             <button id="pb-mask-btn" data-act="pb-toggle-mask" style="margin-top:2px;padding:4px 6px;border-radius:5px;border:1px solid ${demoColorMaskMode ? '#ec4899' : '#64748b'};background:${demoColorMaskMode ? '#831843' : '#0f172a'};color:#fdf2f8;cursor:pointer;font-size:10px;font-weight:800">
               🎨 部位別カラーIDマスク表示: ${demoColorMaskMode ? 'ON' : 'OFF'}
             </button>
+          </div>
+        ` : devModalActiveTab === 'BATTER_EDITOR' ? `
+          <!-- 【タブ：BATTER_EDITOR】打者スイングアニメーション＆フォーム検証デモ -->
+          <div style="background:rgba(30,41,59,0.85);padding:8px 10px;border-radius:6px;border:1.5px solid #38bdf8;box-shadow:0 0 12px rgba(56,189,248,0.25)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:900;color:#38bdf8">💥 バッター スイングアニメーション検証デモ</span>
+              <span style="font-size:9px;background:#0369a1;color:#fff;padding:1px 6px;border-radius:4px;font-weight:700">96-Frame Rig</span>
+            </div>
+
+            <!-- 1. 打者専用カメラアングル切り替え -->
+            <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;padding:6px 8px;margin-bottom:6px">
+              <div style="font-size:9.5px;color:#cbd5e1;font-weight:700;margin-bottom:4px">🎥 カメラ視点:</div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
+                <button data-act="bb-set-cam" data-cam="BATTER_FOCUS_VIEW" style="padding:4px 2px;font-size:9.5px;font-weight:800;border-radius:4px;border:1px solid #38bdf8;background:#0369a1;color:#fff;cursor:pointer" title="打者の表情・ヘルメット・前髪・バットを間近で観察">🔍 打者正面</button>
+                <button data-act="bb-set-cam" data-cam="SIDE_3B_VIEW" style="padding:4px 2px;font-size:9.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;cursor:pointer" title="バットのインサイドアウト軌道・インパクトを横から観察">📐 三塁真横</button>
+                <button data-act="bb-set-cam" data-cam="FRONT_SUB_VIEW" style="padding:4px 2px;font-size:9.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;cursor:pointer" title="捕手・審判目線から観察">👀 捕手目線</button>
+                <button data-act="bb-set-cam" data-cam="PITCH_VIEW" style="padding:4px 2px;font-size:9.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;cursor:pointer" title="TV中継センター全体カメラ">🏟️ センター</button>
+              </div>
+            </div>
+
+            <!-- 2. 左右打席切り替え -->
+            <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;padding:6px 8px;margin-bottom:6px">
+              <span style="font-size:10px;font-weight:800;color:#cbd5e1">打席（利き腕）:</span>
+              <div style="display:flex;gap:4px">
+                <button data-act="bb-set-hands" data-hands="R" style="padding:3px 10px;font-size:10px;font-weight:800;border-radius:4px;border:1px solid ${batterDemoHandedness === 'R' ? '#f59e0b' : '#475569'};background:${batterDemoHandedness === 'R' ? '#78350f' : '#0f172a'};color:${batterDemoHandedness === 'R' ? '#fef08a' : '#cbd5e1'};cursor:pointer">
+                  右打者 (RHB)
+                </button>
+                <button data-act="bb-set-hands" data-hands="L" style="padding:3px 10px;font-size:10px;font-weight:800;border-radius:4px;border:1px solid ${batterDemoHandedness === 'L' ? '#f59e0b' : '#475569'};background:${batterDemoHandedness === 'L' ? '#78350f' : '#0f172a'};color:${batterDemoHandedness === 'L' ? '#fef08a' : '#cbd5e1'};cursor:pointer">
+                  左打者 (LHB)
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. 打撃主要フェーズ（コマ送り・8ステップ） -->
+            <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;padding:6px 8px;margin-bottom:6px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:9.5px;color:#cbd5e1;font-weight:700">🎬 打撃主要フェーズ:</span>
+                <span id="bb-phase-label" style="font-size:9.5px;font-weight:800;color:#38bdf8">${batterStageLabel}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:3px">
+                <button data-act="bb-step-phase" data-phase="0.00" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">① 構え</button>
+                <button data-act="bb-step-phase" data-phase="0.25" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">② タメ</button>
+                <button data-act="bb-step-phase" data-phase="0.43" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #38bdf8;background:#0c4a6e;color:#7dd3fc;cursor:pointer;font-weight:800">③ トップ</button>
+                <button data-act="bb-step-phase" data-phase="0.55" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">④ 踏み込み</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px">
+                <button data-act="bb-step-phase" data-phase="0.68" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑤ 加速</button>
+                <button data-act="bb-step-phase" data-phase="0.76" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #f59e0b;background:#78350f;color:#fef08a;cursor:pointer;font-weight:800">⑥ インパクト</button>
+                <button data-act="bb-step-phase" data-phase="0.86" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑦ 振り抜き</button>
+                <button data-act="bb-step-phase" data-phase="1.00" style="padding:3px 1px;font-size:9px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;cursor:pointer">⑧ フィニッシュ</button>
+              </div>
+            </div>
+
+            <!-- 4. スライダーで自由スクラブ再生 -->
+            <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;padding:6px 8px;margin-bottom:6px">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:#cbd5e1;font-weight:700">
+                <span>スイング進行度 (Scrub):</span>
+                <span id="bb-slider-val" style="color:#38bdf8;font-weight:800">${(batterDemoPhase * 100).toFixed(0)}% (Frame ${(batterDemoPhase * 95).toFixed(0)})</span>
+              </div>
+              <input type="range" id="bb-scrub-slider" min="0" max="1" step="0.01" value="${batterDemoPhase}" style="width:100%;margin-top:4px;cursor:pointer" data-act="bb-scrub" />
+            </div>
+
+            <!-- 5. 連続アニメーション再生 -->
+            <div style="display:flex;gap:4px">
+              <button data-act="bb-play-motion" data-speed="0.35" style="flex:1;padding:5px;border-radius:5px;border:1px solid #38bdf8;background:#0284c7;color:#fff;cursor:pointer;font-weight:800;font-size:10.5px">
+                ⏱️ スロースイング (0.35x)
+              </button>
+              <button data-act="bb-play-motion" data-speed="1.0" style="flex:1;padding:5px;border-radius:5px;border:1px solid #10b981;background:#059669;color:#fff;cursor:pointer;font-weight:800;font-size:10.5px">
+                ⚡ 実戦フルスイング (1.0x)
+              </button>
+            </div>
           </div>
         ` : `
           <!-- 【タブ3】演出テスト -->
@@ -1938,6 +2015,18 @@ function formatStageLabel(p: number): string {
   return `⑮ 守備復帰 (${pct}%)`;
 }
 
+function formatBatterStageLabel(p: number): string {
+  const pct = Math.round(p * 100);
+  if (p <= 0.12) return `① 構え (Stance: ${pct}%)`;
+  if (p <= 0.35) return `② タメ・前足上げ (Load: ${pct}%)`;
+  if (p <= 0.48) return `③ トップ形成 (Top: ${pct}%)`;
+  if (p <= 0.60) return `④ 踏み込み・腰回転 (Stride: ${pct}%)`;
+  if (p <= 0.72) return `⑤ スイング加速 (Swing: ${pct}%)`;
+  if (p <= 0.80) return `⑥ インパクト一閃！ (Impact: ${pct}%)`;
+  if (p <= 0.92) return `⑦ 振り抜き・回転 (Follow: ${pct}%)`;
+  return `⑧ フィニッシュ (Finish: ${pct}%)`;
+}
+
 function applyDemoUniformPreset() {
   if (!match3d) return;
   const presets: Record<string, { cap: number; shirt: number; pants: number; under: number; accent: number }> = {
@@ -2000,6 +2089,21 @@ export function mountMatch3D(): void {
       isAnimating = false;
       match3d?.setPitcherPhase(p);
       if (phaseLabel) phaseLabel.textContent = formatStageLabel(p);
+    });
+  }
+
+  // 打者スイングスライダーのバインド
+  const bbSlider = document.getElementById('bb-scrub-slider') as HTMLInputElement | null;
+  const bbLabel = document.getElementById('bb-phase-label');
+  const bbVal = document.getElementById('bb-slider-val');
+  if (bbSlider) {
+    bbSlider.addEventListener('input', () => {
+      const p = parseFloat(bbSlider.value);
+      batterDemoPhase = p;
+      match3d?.setBatterPhase(p);
+      batterStageLabel = formatBatterStageLabel(p);
+      if (bbLabel) bbLabel.textContent = batterStageLabel;
+      if (bbVal) bbVal.textContent = `${(p * 100).toFixed(0)}% (Frame ${Math.round(p * 95)})`;
     });
   }
 
@@ -2240,8 +2344,76 @@ registerActions({
     const tab = el.getAttribute('data-tab') as DevModalTab;
     if (tab) {
       devModalActiveTab = tab;
+      if (tab === 'BATTER_EDITOR') {
+        match3d?.setCameraMode('BATTER_FOCUS_VIEW');
+        match3d?.setBatterPhase(batterDemoPhase);
+        match3d?.setBatterHandedness(batterDemoHandedness);
+      } else if (tab === 'FORM_EDITOR') {
+        match3d?.setCameraMode(demoCameraMode);
+        match3d?.setPitcherPhase(demoPhase);
+      }
       requestRender();
     }
+  },
+
+  'bb-set-cam': (el: HTMLElement) => {
+    const cam = (el.getAttribute('data-cam') || 'BATTER_FOCUS_VIEW') as CameraViewMode;
+    demoCameraMode = cam;
+    match3d?.setCameraMode(cam);
+    document.querySelectorAll('[data-act="bb-set-cam"]').forEach((btn) => {
+      const b = btn as HTMLElement;
+      const isAct = b.getAttribute('data-cam') === cam;
+      b.style.borderColor = isAct ? '#38bdf8' : '#475569';
+      b.style.background = isAct ? '#0369a1' : '#0f172a';
+    });
+  },
+
+  'bb-set-hands': (el: HTMLElement) => {
+    const h = (el.getAttribute('data-hands') || 'R') as 'R' | 'L';
+    batterDemoHandedness = h;
+    match3d?.setBatterHandedness(h);
+    document.querySelectorAll('[data-act="bb-set-hands"]').forEach((btn) => {
+      const b = btn as HTMLElement;
+      const isAct = b.getAttribute('data-hands') === h;
+      b.style.borderColor = isAct ? '#f59e0b' : '#475569';
+      b.style.background = isAct ? '#78350f' : '#0f172a';
+      b.style.color = isAct ? '#fef08a' : '#cbd5e1';
+    });
+  },
+
+  'bb-step-phase': (el: HTMLElement) => {
+    const p = parseFloat(el.getAttribute('data-phase') || '0');
+    batterDemoPhase = p;
+    match3d?.setBatterPhase(p);
+    batterStageLabel = formatBatterStageLabel(p);
+    const slider = document.getElementById('bb-scrub-slider') as HTMLInputElement | null;
+    const label = document.getElementById('bb-phase-label');
+    const val = document.getElementById('bb-slider-val');
+    if (slider) slider.value = String(p);
+    if (label) label.textContent = batterStageLabel;
+    if (val) val.textContent = `${(p * 100).toFixed(0)}% (Frame ${Math.round(p * 95)})`;
+  },
+
+  'bb-play-motion': (el: HTMLElement) => {
+    if (!match3d) return;
+    const sp = parseFloat(el.getAttribute('data-speed') || '1.0');
+    const slider = document.getElementById('bb-scrub-slider') as HTMLInputElement | null;
+    const label = document.getElementById('bb-phase-label');
+    const val = document.getElementById('bb-slider-val');
+
+    match3d.playBatterSwingPreview(
+      sp,
+      (p) => {
+        batterDemoPhase = p;
+        if (slider) slider.value = String(p);
+        const lbl = formatBatterStageLabel(p);
+        if (label) label.textContent = lbl;
+        if (val) val.textContent = `${(p * 100).toFixed(0)}% (Frame ${Math.round(p * 95)})`;
+      },
+      () => {
+        // 再生完了
+      }
+    );
   },
 
   'apply-pitcher-preset': (el: HTMLElement) => {
