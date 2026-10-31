@@ -583,38 +583,34 @@ export function setRealisticPitchEasing(enabled: boolean): void {
 
 export function calcBiomechanicsWindupPhase(u: number): number {
   const t = Math.max(0, Math.min(1, u));
-  if (t <= 0.46) {
-    // 足上げ〜頂点タメ: 0.00 -> 0.25 (頂点付近の角速度がゼロに近づくタメ)
-    const s = t / 0.46;
-    const ease = Math.sin((s * Math.PI) / 2);
-    return 0.25 * ease;
-  } else if (t <= 0.76) {
-    // ステップ・重心移動: 0.25 -> 0.52 (前方に重力加速しながら沈み込む)
-    const s = (t - 0.46) / 0.30;
-    const ease = s * s * (3 - 2 * s);
-    return 0.25 + 0.27 * ease;
-  } else if (t <= 0.90) {
-    // 着地〜腕のしなり（レイトコッキング）: 0.52 -> 0.62
-    const s = (t - 0.76) / 0.14;
-    return 0.52 + 0.10 * s;
+  if (t <= 0.52) {
+    // 1. 足上げ〜頂点タメ: 0.00 -> 0.24
+    // じっくり時間をかけて足を高く上げ、頂点でバランスを取る「タメ」を作る
+    const s = t / 0.52;
+    const ease = Math.sin((s * Math.PI) / 2); // 頂点に向かって速度がゼロへ滑らかに収束するタメ
+    return 0.24 * ease;
   } else {
-    // 腕の振り〜リリース一閃！: 0.62 -> 0.68 (爆発的超加速スナップ)
-    const s = (t - 0.90) / 0.10;
-    const ease = Math.pow(s, 2.2);
-    return 0.62 + 0.06 * ease;
+    // 2. 足を下ろし始めてから放球まで「一気呵成」: 0.24 -> 0.68
+    // 足を下ろし始めた瞬間から、重力落下と運動連鎖（キネティックチェーン）によって
+    // 途中で一切の減速・ブレーキ・ひっかかりなく、放球の瞬間まで単調加速で一気に駆け抜ける！
+    const s = (t - 0.52) / 0.48;
+    const ease = Math.pow(s, 1.35); // 緩やかに動き出し、放球一閃までブレーキなしの連続加速
+    return 0.24 + 0.44 * ease;
   }
 }
 
 export function calcBiomechanicsFollowThroughPhase(p: number): number {
   const t = Math.max(0, Math.min(1, p));
-  if (t <= 0.35) {
-    // 放球直後の鋭い腕の振り抜き: 0.68 -> 0.88
-    const s = t / 0.35;
-    const ease = 1 - Math.pow(1 - s, 2.0);
+  if (t <= 0.45) {
+    // 3. 放球直後の一気呵成なフォロースルー: 0.68 -> 0.88
+    // 放球の最高速度をそのまま引き継ぎ、一切引っかからずに左膝外側へダイナミックに巻きつき、右足を跳ね上げる！
+    const s = t / 0.45;
+    const ease = 1 - Math.pow(1 - s, 1.5);
     return 0.68 + 0.20 * ease;
   } else {
-    // 減速フィニッシュ: 0.88 -> 1.00
-    const s = (t - 0.35) / 0.65;
+    // 4. 減速フィニッシュ・守備構え: 0.88 -> 1.00
+    // 振り抜いた勢いを自然に吸収し、両足で正対して捕球体勢へ滑らかに収まる
+    const s = (t - 0.45) / 0.55;
     const ease = Math.sin((s * Math.PI) / 2);
     return 0.88 + 0.12 * ease;
   }

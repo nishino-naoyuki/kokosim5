@@ -519,7 +519,10 @@ export function toQuatFromEuler(eulerArr: [number, number, number], order: THREE
 }
 
 function interpolateQuatPoses(a: QuatBonePose, b: QuatBonePose, rawT: number): QuatBonePose {
-  const t = rawT * rawT * (3 - 2 * rawT); // smoothstep
+  // キーフレーム間は線形補間（rawTそのまま）で接続！
+  // ※ ここでsmoothstepを行うと、各キーフレーム境界（15箇所）で速度がゼロに落ちて「ひっかかる」原因になるため、
+  //    全体の緩急制御（タメ・一気呵成）は外側のタイムイージング関数で一元管理する
+  const t = rawT;
   return {
     pelvisPos: new THREE.Vector3().lerpVectors(a.pelvisPos, b.pelvisPos, t),
     pelvisQ: a.pelvisQ.clone().slerp(b.pelvisQ, t),
