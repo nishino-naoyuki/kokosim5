@@ -1062,6 +1062,12 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
     torsoGroup.rotation.y = chestOpenDeg * DEG;
 
     // ② 腕・脚の1本化（連続スプラインチューブ更新）
+    // 利き腕（右肘）の過剰な上向き跳ね上がり防止（解剖学拘束：肩の高さより上に突き出ないよう胸前〜脇腹の自然なラインに保持）
+    const maxElbowY = shR[1] - 0.06;
+    if (elR[1] > maxElbowY) {
+      elR[1] = maxElbowY;
+    }
+
     rArmHelper.update(shR, elR, wrR);
     lArmHelper.update(shL, elL, wrL);
 
