@@ -1172,6 +1172,21 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
   torsoMesh.position.set(0, 0.225, 0);
   spineBone.add(torsoMesh);
 
+  // ユニフォームの立体前立て＆アニメ胸ボタン（プロトタイプアニメパーツ）
+  const placketGeo = new THREE.BoxGeometry(0.024, 0.20, 0.006);
+  const placketMesh = createCelMesh(placketGeo, shirtPlainMat, 1.05);
+  placketMesh.position.set(0, 0.31, 0.116);
+  spineBone.add(placketMesh);
+
+  const buttonGeo = new THREE.CylinderGeometry(0.007, 0.007, 0.005, 12);
+  buttonGeo.rotateX(Math.PI / 2);
+  const buttonMat = createAnimeCelMaterial({ color: '#f8fafc', shadowTint: new THREE.Vector3(0.7, 0.7, 0.75) });
+  const btn1 = createCelMesh(buttonGeo, buttonMat, 1.06);
+  btn1.position.set(0, 0.36, 0.120);
+  const btn2 = createCelMesh(buttonGeo, buttonMat, 1.06);
+  btn2.position.set(0, 0.28, 0.120);
+  spineBone.add(btn1, btn2);
+
   // 肩の丸み（ラグランショルダーのなだらかなライン：右 +X, 左 -X）
   const shoulderCapGeo = new THREE.SphereGeometry(0.062, 24, 20);
   const rShoulderCap = createCelMesh(shoulderCapGeo, shirtPlainMat, 1.05);
@@ -1185,6 +1200,13 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
   const collarMesh = createCelMesh(collarGeo, underMat, 1.055);
   collarMesh.position.set(0, 0.44, 0);
   spineBone.add(collarMesh);
+
+  // ユニフォームの立体Vネック襟パーツ（アンダーシャツに重なるアウター襟）
+  const vCollarGeo = new THREE.CylinderGeometry(0.074, 0.082, 0.022, 28, 1, true, -Math.PI * 0.42, Math.PI * 0.84);
+  const vCollarMesh = createCelMesh(vCollarGeo, shirtPlainMat, 1.06);
+  vCollarMesh.position.set(0, 0.432, 0.008);
+  vCollarMesh.rotation.x = 0.14;
+  spineBone.add(vCollarMesh);
 
   // 3. Neck & HeadBone（2Dアニメ顔＆刈り上げ髪テクスチャ ＋ 野球帽 — 常に捕手へ LookAt ロック！）
   const neckBone = new THREE.Group();
@@ -1224,6 +1246,20 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
   capDome.position.set(0, 0.084, 0);
   headBone.add(capDome);
 
+  // 帽子の天ボタン（クラウントップ）
+  const capBtnGeo = new THREE.SphereGeometry(0.012, 16, 12);
+  const capBtn = createCelMesh(capBtnGeo, capMat, 1.05);
+  capBtn.position.set(0, 0.178, 0.010);
+  headBone.add(capBtn);
+
+  // 帽子フロントの立体校章エンブレム
+  const emblemGeo = new THREE.BoxGeometry(0.032, 0.034, 0.008);
+  const emblemMat = createAnimeCelMaterial({ color: '#f59e0b', shadowTint: new THREE.Vector3(0.7, 0.5, 0.2) });
+  const emblemMesh = createCelMesh(emblemGeo, emblemMat, 1.06);
+  emblemMesh.position.set(0, 0.118, 0.112);
+  emblemMesh.rotation.x = -0.15;
+  headBone.add(emblemMesh);
+
   // 野球帽のツバ（正面 +Z 方向＝キャッチャー方向へシャープに突き出す）
   const visorGeo = new THREE.CylinderGeometry(0.110, 0.110, 0.016, 24, 1, false, -Math.PI * 0.42, Math.PI * 0.84);
   visorGeo.scale(0.94, 1.0, 1.38);
@@ -1231,6 +1267,41 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
   visorMesh.position.set(0, 0.082, 0.058);
   visorMesh.rotation.x = 0.14;
   headBone.add(visorMesh);
+
+  // 【最重要】立体アニメ前髪パーツ（帽子のツバの下から額へ鋭く垂れるシャープな毛束）
+  const bangsGroup = new THREE.Group();
+  const hairMat = createAnimeCelMaterial({
+    color: '#1c1917',
+    shadowTint: new THREE.Vector3(0.5, 0.45, 0.5),
+  });
+
+  const bangCenterGeo = new THREE.ConeGeometry(0.018, 0.055, 4);
+  bangCenterGeo.rotateX(Math.PI);
+  bangCenterGeo.scale(1.0, 1.0, 0.45);
+  const bangCenter = createCelMesh(bangCenterGeo, hairMat, 1.06);
+  bangCenter.position.set(0, 0.076, 0.106);
+  bangCenter.rotation.x = 0.18;
+  bangsGroup.add(bangCenter);
+
+  const bangLeftGeo = new THREE.ConeGeometry(0.015, 0.048, 4);
+  bangLeftGeo.rotateX(Math.PI);
+  bangLeftGeo.scale(1.0, 1.0, 0.4);
+  const bangLeft = createCelMesh(bangLeftGeo, hairMat, 1.06);
+  bangLeft.position.set(-0.032, 0.078, 0.102);
+  bangLeft.rotation.x = 0.16;
+  bangLeft.rotation.z = -0.22;
+  bangsGroup.add(bangLeft);
+
+  const bangRightGeo = new THREE.ConeGeometry(0.015, 0.048, 4);
+  bangRightGeo.rotateX(Math.PI);
+  bangRightGeo.scale(1.0, 1.0, 0.4);
+  const bangRight = createCelMesh(bangRightGeo, hairMat, 1.06);
+  bangRight.position.set(0.032, 0.078, 0.102);
+  bangRight.rotation.x = 0.16;
+  bangRight.rotation.z = 0.22;
+  bangsGroup.add(bangRight);
+
+  headBone.add(bangsGroup);
 
   // 4. 右腕（投球腕：右側 +X = +0.160、Shoulder_R -> Elbow_R -> Wrist_R + BallInHand）
   const rShoulderBone = new THREE.Group();
@@ -1294,19 +1365,53 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
   lWristBone.position.set(0, -0.24, 0);
   lElbowBone.add(lWristBone);
 
-  // 立体的な茶革グローブ（親指・ウェブ・ポケット造形）
+  // 立体的な高校野球アニメグローブ（ポケット＋親指＋4本指バック＋クロスウェブ網目＋革紐ステッチ）
   const gloveGroup = new THREE.Group();
+  
+  // 1. 捕球面ポケット
   const glovePalmGeo = new THREE.SphereGeometry(0.078, 20, 18);
   glovePalmGeo.scale(0.92, 1.20, 0.65);
   const glovePalm = createCelMesh(glovePalmGeo, gloveMat, 1.07);
   glovePalm.position.set(0, -0.045, 0.02);
   gloveGroup.add(glovePalm);
 
-  const gloveThumbGeo = new THREE.CylinderGeometry(0.022, 0.028, 0.09, 16);
+  // 2. 親指コア
+  const gloveThumbGeo = new THREE.CylinderGeometry(0.022, 0.028, 0.095, 16);
   const gloveThumb = createCelMesh(gloveThumbGeo, gloveMat, 1.07);
-  gloveThumb.position.set(0.045, -0.035, 0.04);
+  gloveThumb.position.set(0.048, -0.032, 0.040);
   gloveThumb.rotation.z = 0.35;
+  gloveThumb.rotation.x = 0.15;
   gloveGroup.add(gloveThumb);
+
+  // 3. 4本指バック（手の甲・指部シェル）
+  const gloveFingersGeo = new THREE.CylinderGeometry(0.034, 0.046, 0.11, 16);
+  gloveFingersGeo.scale(1.15, 1.0, 0.65);
+  const gloveFingers = createCelMesh(gloveFingersGeo, gloveMat, 1.07);
+  gloveFingers.position.set(-0.038, -0.035, 0.036);
+  gloveFingers.rotation.z = -0.25;
+  gloveGroup.add(gloveFingers);
+
+  // 4. 特徴的なクロスウェブ（Tバー／Hウェブ網目パーツ）
+  const webMat = createAnimeCelMaterial({ color: '#78350f', shadowTint: new THREE.Vector3(0.65, 0.45, 0.3) });
+  const webBarGeo = new THREE.BoxGeometry(0.050, 0.016, 0.010);
+  const webBar1 = createCelMesh(webBarGeo, webMat, 1.06);
+  webBar1.position.set(0.008, 0.004, 0.058);
+  const webBar2 = createCelMesh(webBarGeo, webMat, 1.06);
+  webBar2.position.set(0.008, -0.022, 0.058);
+
+  const webVerticalGeo = new THREE.BoxGeometry(0.014, 0.065, 0.010);
+  const webVertical = createCelMesh(webVerticalGeo, webMat, 1.06);
+  webVertical.position.set(0.008, -0.008, 0.058);
+  gloveGroup.add(webBar1, webBar2, webVertical);
+
+  // 5. 革紐ステッチアクセント（コントラストの効いた黄色レース紐）
+  const laceMat = createAnimeCelMaterial({ color: '#fef08a' });
+  const laceGeo = new THREE.CylinderGeometry(0.004, 0.004, 0.08, 8);
+  laceGeo.rotateZ(Math.PI / 2);
+  const laceMesh = createCelMesh(laceGeo, laceMat, 1.05);
+  laceMesh.position.set(0.008, 0.026, 0.046);
+  gloveGroup.add(laceMesh);
+
   lWristBone.add(gloveGroup);
 
   // 6. 両脚（引き締まった太もも＋膝球＋野球パンツの自然なブラウジング＋2本ラインソックス＋黒スパイク）
