@@ -1337,7 +1337,7 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
   const rHand = createCelMesh(handGeo, skinMat, 1.065);
   rWristBone.add(rHand);
 
-  const handBallMesh = createCelMesh(new THREE.SphereGeometry(0.039, 16, 14), whiteMat, 1.08);
+  const handBallMesh = createCelMesh(new THREE.SphereGeometry(0.036, 16, 14), whiteMat, 1.05);
   handBallMesh.position.set(0, -0.025, 0.026);
   rWristBone.add(handBallMesh);
 

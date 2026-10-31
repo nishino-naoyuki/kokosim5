@@ -733,8 +733,8 @@ export function initMatch3D(
   umpireMesh.rotation.y = Math.PI; // カメラ（-Z）に正対
   scene.add(umpireMesh);
 
-  // 8. 投球ボール（白球＋リリース前は非表示、リリース前は投手の手のひらのボールが表示される）
-  const ballGeo = new THREE.SphereGeometry(0.075, 16, 16);
+  // 8. 投球ボール（硬式野球公認球サイズ：半径0.0375m＝直径7.5cm、従来の0.075mから半分に縮小）
+  const ballGeo = new THREE.SphereGeometry(0.0375, 16, 16);
   const ballMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   const ball = new THREE.Mesh(ballGeo, ballMat);
   ball.position.set(0.18, 1.82, -MOUND_DISTANCE + 1.2);
