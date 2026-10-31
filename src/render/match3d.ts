@@ -1066,6 +1066,14 @@ export function initMatch3D(
     batter.setPhase(0);
     ball.visible = false;
 
+    // キャッチャーミット（捕球位置への動的シフト用準備）
+    const catcherMitt = catcherMesh.children[1] as THREE.Mesh | undefined;
+    const initialMittPos = { x: 0.295, y: 0.773, z: 0.04 };
+    if (catcherMitt) {
+      catcherMitt.position.set(initialMittPos.x, initialMittPos.y, initialMittPos.z);
+      catcherMitt.rotation.z = -0.06;
+    }
+
     const isSwing =
       outcome.ballResult === 'IN_PLAY' ||
       outcome.ballResult === 'SWINGING_STRIKE' ||
@@ -1119,6 +1127,28 @@ export function initMatch3D(
       const pos = pitchPosition(pParams, curT);
       // Three.js 座標系: x = pos.x, y = pos.z (高さ), z = 0.2 - pos.y (距離)
       ball.position.set(pos.x, pos.z, 0.2 - pos.y);
+
+      // キャッチャーミット：投手が投げて0.1秒（100ms）後にボール最終到達点へ移動
+      if (catcherMitt) {
+        const shiftStartTime = 100 / playbackSpeed;
+        const shiftDuration = 180 / playbackSpeed;
+        if (flightElapsed < shiftStartTime) {
+          catcherMitt.position.set(initialMittPos.x, initialMittPos.y, initialMittPos.z);
+          catcherMitt.rotation.z = -0.06;
+        } else {
+          const shiftProgress = Math.min(1.0, (flightElapsed - shiftStartTime) / shiftDuration);
+          const ease = 1 - Math.pow(1 - shiftProgress, 3);
+          const endPos = pitchPosition(pParams, realFlightSec);
+          // 捕手ローカル座標系への変換 (catcherMesh: pos(0.05, 0.02, 1.22), rotY: Math.PI)
+          const targetLocalX = 0.05 - endPos.x;
+          const targetLocalY = Math.max(0.28, endPos.z - 0.02);
+          const targetLocalZ = 0.04;
+          catcherMitt.position.x = initialMittPos.x + (targetLocalX - initialMittPos.x) * ease;
+          catcherMitt.position.y = initialMittPos.y + (targetLocalY - initialMittPos.y) * ease;
+          catcherMitt.position.z = initialMittPos.z + (targetLocalZ - initialMittPos.z) * ease;
+          catcherMitt.rotation.z = -0.06 + (-0.35 * (endPos.x < 0 ? 1 : -0.5) - (-0.06)) * ease;
+        }
+      }
 
       // 打者：
       if (!isSwing) {
@@ -1199,6 +1229,10 @@ export function initMatch3D(
           pitcher.setPhase(0);
           if (!isSwing) {
             batter.setPhase(0);
+          }
+          if (catcherMitt) {
+            catcherMitt.position.set(initialMittPos.x, initialMittPos.y, initialMittPos.z);
+            catcherMitt.rotation.z = -0.06;
           }
           ball.visible = false;
           ball.position.set(0.18, 1.82, -MOUND_DISTANCE + 1.2);

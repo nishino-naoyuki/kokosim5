@@ -2024,47 +2024,6 @@ export function createRealisticOfficial(role: 'UMPIRE' | 'CATCHER', options: Pla
   ctx.lineWidth = 2.5;
   ctx.stroke();
 
-  // キャッチャーミット（画面右側＝投手から見て左手でドッシリ構える・リアル赤革＋白編み紐）
-  // 1. ミット外殻（重厚な赤茶・ディープレッドレザー）
-  ctx.fillStyle = '#991b1b';
-  ctx.strokeStyle = '#450a0a';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.ellipse(290, 230, 44, 38, -0.12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  // 2. ポケット（捕球面の深みとターゲット陰影）
-  ctx.fillStyle = '#7f1d1d';
-  ctx.beginPath();
-  ctx.ellipse(284, 232, 26, 28, -0.05, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 3. 親指側＆小指側の厚い土手（パッド）ハイライト
-  ctx.strokeStyle = '#b91c1c';
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.arc(292, 230, 36, 0.4 * Math.PI, 1.2 * Math.PI);
-  ctx.stroke();
-
-  // 4. 白/クリーム色の編み紐（ウェブ・外周レース）
-  ctx.strokeStyle = '#fef08a';
-  ctx.lineWidth = 3;
-  // ウェブ部のクロス紐
-  ctx.beginPath();
-  ctx.moveTo(250, 206); ctx.lineTo(268, 222);
-  ctx.moveTo(254, 218); ctx.lineTo(272, 234);
-  ctx.moveTo(260, 204); ctx.lineTo(276, 218);
-  ctx.stroke();
-
-  // 外周のステッチ紐（点線レース）
-  ctx.setLineDash([4, 6]);
-  ctx.strokeStyle = '#fef3c7';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.ellipse(290, 230, 40, 34, -0.12, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.setLineDash([]); // リセット
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;

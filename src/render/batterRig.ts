@@ -381,16 +381,54 @@ function createDynamicContinuousLimb(
   const _vA = new THREE.Vector3();
   const _vB = new THREE.Vector3();
   const _vC = new THREE.Vector3();
+  const _bone1 = new THREE.Vector3();
+  const _bone2 = new THREE.Vector3();
+  const _tan1 = new THREE.Vector3();
+  const _tan2 = new THREE.Vector3();
 
   function update(start: Vec3Arr, mid: Vec3Arr, end: Vec3Arr) {
     _vA.set(start[0], start[1], start[2]);
     _vB.set(mid[0], mid[1], mid[2]);
     _vC.set(end[0], end[1], end[2]);
 
-    const curve = new THREE.CatmullRomCurve3([_vA, _vB, _vC], false, 'centripetal');
-    const frames = curve.computeFrenetFrames(tubularSegments, false);
+    _bone1.subVectors(_vB, _vA);
+    _bone2.subVectors(_vC, _vB);
+    _tan1.copy(_bone1).normalize();
+    _tan2.copy(_bone2).normalize();
+
     const posAttr = geo.attributes.position as THREE.BufferAttribute;
     const normAttr = geo.attributes.normal as THREE.BufferAttribute;
+
+    const getRingFrame = (u: number) => {
+      const pt = new THREE.Vector3();
+      const tan = new THREE.Vector3();
+      let r: number;
+
+      if (u < 0.46) {
+        const t = u / 0.46;
+        pt.lerpVectors(_vA, _vB, t);
+        tan.copy(_tan1);
+        r = rStart + (rMid - rStart) * t;
+      } else if (u <= 0.54) {
+        const t = (u - 0.46) / 0.08;
+        // 関節部（膝・肘の屈曲点）
+        pt.copy(_vB);
+        tan.lerpVectors(_tan1, _tan2, t).normalize();
+        r = rMid + Math.sin(t * Math.PI) * 0.005;
+      } else {
+        const t = (u - 0.54) / 0.46;
+        pt.lerpVectors(_vB, _vC, t);
+        tan.copy(_tan2);
+        r = rMid + (rEnd - rMid) * t;
+      }
+
+      let nx = -tan.y, ny = tan.x, nz = 0;
+      const nLen = Math.hypot(nx, ny, nz);
+      const n = nLen > 0.01 ? new THREE.Vector3(nx / nLen, ny / nLen, 0) : new THREE.Vector3(1, 0, 0);
+      const bn = new THREE.Vector3().crossVectors(tan, n).normalize();
+
+      return { pt, tan, n, bn, r };
+    };
 
     let writeIdx = 0;
     const writeRing = (
@@ -425,30 +463,22 @@ function createDynamicContinuousLimb(
       }
     };
 
-    const ptStart = curve.getPointAt(0);
+    const frame0 = getRingFrame(0);
     for (let c = capSteps; c >= 1; c--) {
       const angle = -(c / (capSteps + 0.5)) * (Math.PI * 0.48);
-      writeRing(ptStart, frames.normals[0], frames.binormals[0], frames.tangents[0], rStart, angle);
+      writeRing(frame0.pt, frame0.n, frame0.bn, frame0.tan, rStart, angle);
     }
 
     for (let i = 0; i <= tubularSegments; i++) {
       const u = i / tubularSegments;
-      const pt = curve.getPointAt(u);
-      let r: number;
-      if (u <= 0.5) {
-        const t = u / 0.5;
-        r = rStart + (rMid - rStart) * t + Math.sin(t * Math.PI) * 0.006;
-      } else {
-        const t = (u - 0.5) / 0.5;
-        r = rMid + (rEnd - rMid) * t + Math.sin(t * Math.PI) * 0.005;
-      }
-      writeRing(pt, frames.normals[i], frames.binormals[i], frames.tangents[i], r, 0.0);
+      const fr = getRingFrame(u);
+      writeRing(fr.pt, fr.n, fr.bn, fr.tan, fr.r, 0.0);
     }
 
-    const ptEnd = curve.getPointAt(1);
+    const frame1 = getRingFrame(1);
     for (let c = 1; c <= capSteps; c++) {
       const angle = (c / (capSteps + 0.5)) * (Math.PI * 0.48);
-      writeRing(ptEnd, frames.normals[tubularSegments], frames.binormals[tubularSegments], frames.tangents[tubularSegments], rEnd, angle);
+      writeRing(frame1.pt, frame1.n, frame1.bn, frame1.tan, rEnd, angle);
     }
 
     posAttr.needsUpdate = true;
@@ -1035,6 +1065,10 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
     const elL = interpJoint('elbow_L');
     const wrL = interpJoint('wrist_L');
 
+    // ★ 承認済み：肩の高さ 案B (+13cm引き上げ: 鎖骨・僧帽筋トップ Y ≈ 1.52m)
+    shR[1] += 0.13;
+    shL[1] += 0.13;
+
     const hipR = interpJoint('hip_R');
     const knR = interpJoint('knee_R');
     const akR = interpJoint('ankle_R');
@@ -1049,6 +1083,17 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
     const grip = interpJoint('grip');
 
     const currentFrameFloat = frameIdx0 + alpha;
+
+    // ★ 構え時の自然な膝関節屈曲（30cm前方に湾曲していたゴム脚を、前傾14cmの引き締まった関節屈曲へ）
+    // および肩案Bに合わせた構え手首・バット位置の連動調整
+    if (currentFrameFloat < 42) {
+      const blend = Math.max(0, 1 - (currentFrameFloat - 32) / 10);
+      knR[2] = knR[2] - 0.15 * blend;
+      knL[2] = knL[2] - 0.15 * blend;
+      wrR[1] += 0.08 * blend;
+      wrL[1] += 0.08 * blend;
+      batTip[1] += 0.10 * blend;
+    }
 
     // ① 体幹・骨盤の回旋連動（腰先行・胸遅れ）
     const pelvisOpenDeg = f0.rot.pelvis_open + (f1.rot.pelvis_open - f0.rot.pelvis_open) * alpha;
@@ -1139,10 +1184,12 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
       prevBatQ.copy(_batQ);
       batGroup.quaternion.copy(_batQ);
 
+      // 右手（上）と左手（下）で白いグリップテープを包み込む自然な配置
+      // ノブ（0cm）から14cm上に右手を合わせることで、左手（下）もノブ直上（6cm）に密着
       batGroup.position.set(
-        wrR[0] - _batDir.x * 0.06,
-        wrR[1] - _batDir.y * 0.06,
-        wrR[2] - _batDir.z * 0.06
+        wrR[0] - _batDir.x * 0.14,
+        wrR[1] - _batDir.y * 0.14,
+        wrR[2] - _batDir.z * 0.14
       );
     }
 
