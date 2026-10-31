@@ -854,7 +854,7 @@ export function initMatch3D(
     if (currentTweenId !== null) cancelAnimationFrame(currentTweenId);
     ball.visible = false;
     pitcher.setPhase(0);
-    const totalDurationMs = 1550 / playbackSpeed;
+    const totalDurationMs = 1950 / playbackSpeed;
     const startTime = performance.now();
 
     function loop(now: number) {
@@ -947,7 +947,7 @@ export function initMatch3D(
       outcome.ballResult === 'FOUL';
 
     const animStart = performance.now();
-    const windupDurationMs = 800 / playbackSpeed; // ①構え(0.00) 〜 ⑪放球(0.68) までの連続モーション時間
+    const windupDurationMs = 1250 / playbackSpeed; // ①構え(0.00) 〜 ⑪放球(0.68) までの連続モーション時間（実写プロ投手のリアルテンポ）
     const flightDurationMs = flightMs;            // 放球 〜 ホームベース到達までの飛行時間
     // 空振り・ファウル・安打時のフォロースルー（インパクト〜背中巻き付きハイフィニッシュ）専用時間
     const followThroughMs = isSwing ? 380 / playbackSpeed : 0;

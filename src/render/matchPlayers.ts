@@ -700,15 +700,15 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
   const armMerL = solveArmAnalytical(new THREE.Vector3(-0.20, -0.25, 0.45), new THREE.Vector3(-0.40, 0.70, 0.55));
 
   // ⑪ ボール放球 (Release: まさに指先からボールを離す瞬間！腕がピーンと100%完全伸展(flexDeg=0)！)
-  // ※ オーバースローは頭上垂直やや右側(X=+0.34m)に位置させ、背面カメラから頭の右横にくっきり腕が見えるよう修正！
+  // ※ 前足（左足）に100%体重が乗り、体幹が前足の上へ深く前傾（佐々木朗希・ダルビッシュフォーム完全準拠）！
   let armRelU = new THREE.Vector3(0.50, 0.84, 0.18); // OVERHAND_HIGH: 頭上やや右外側から振り下ろす正統派フォーム！
   let armRelV = armRelU.clone();
-  let relPelvisPos = [0.0, 0.58, 0.78];
-  let relPelvisRot: [number, number, number] = [18, -10, -2];
-  let relSpineRot: [number, number, number] = [16, -8, -2];
-  let folPelvisPos = [0.0, 0.64, 0.88];
-  let folPelvisRot: [number, number, number] = [36, -26, 6];
-  let folSpineRot: [number, number, number] = [30, -26, 6];
+  let relPelvisPos = [0.0, 0.54, 1.22];
+  let relPelvisRot: [number, number, number] = [24, -12, -2];
+  let relSpineRot: [number, number, number] = [46, -14, -2]; // 深い体幹屈曲！前足の上に胸が深く乗る！
+  let folPelvisPos = [0.0, 0.66, 1.28];
+  let folPelvisRot: [number, number, number] = [28, -24, 4];
+  let folSpineRot: [number, number, number] = [40, -22, 4];
 
   let armFolU = new THREE.Vector3(-0.65, -0.65, 0.40); // 左膝外側へダイナミックに巻きつく振り抜き！
   let armFolV = new THREE.Vector3(-0.50, -0.20, -0.80);
@@ -717,37 +717,42 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     // OVERHAND_LOW: やや寝かせた高角度 (約+65°)
     armRelU = new THREE.Vector3(0.56, 0.78, 0.24);
     armRelV = armRelU.clone();
+    relPelvisPos = [0.0, 0.54, 1.22];
+    relSpineRot = [46, -14, -2];
   } else if (isThreeQ) {
     // THREE_QUARTERS: 正統派スリークォーター (約+45°斜め、2時方向)
     armRelU = new THREE.Vector3(0.65, 0.65, 0.35);
     armRelV = armRelU.clone();
-    relPelvisPos = [0.0, 0.72, 1.02];
-    relPelvisRot = [20, -12, -4];
-    relSpineRot = [18, -10, -4];
+    relPelvisPos = [0.0, 0.54, 1.22];
+    relPelvisRot = [24, -12, -4];
+    relSpineRot = [44, -12, -4];
+    folPelvisPos = [0.0, 0.66, 1.28];
+    folPelvisRot = [28, -24, -4];
+    folSpineRot = [40, -22, -4];
   } else if (isSide) {
-    // SIDEARM: サイドスロー (肩と同じ高さ水平、腕をいっぱいに肩と平行に伸ばして広大な横角度をつける！)
+    // SIDEARM: サイドスロー
     armRelU = new THREE.Vector3(0.94, 0.34, 0.01);
     armRelV = armRelU.clone();
     armFolU = new THREE.Vector3(-0.75, 0.10, 0.65);
     armFolV = new THREE.Vector3(-0.60, 0.20, 0.75);
-    relPelvisPos = [0.0, 0.72, 0.98]; // 腰は0.72mに維持（沈み込ませすぎない）
-    relPelvisRot = [16, -10, -6];     // 上体は過度に倒さず、ほぼ直立＋自然な体幹回旋
-    relSpineRot = [14, -8, -8];
-    folPelvisPos = [0.0, 0.74, 1.04];
-    folPelvisRot = [26, -26, -6];
-    folSpineRot = [24, -26, -6];
+    relPelvisPos = [0.0, 0.58, 1.20];
+    relPelvisRot = [22, -10, -6];
+    relSpineRot = [38, -10, -6];
+    folPelvisPos = [0.0, 0.66, 1.26];
+    folPelvisRot = [26, -22, -6];
+    folSpineRot = [36, -22, -6];
   } else if (isSub) {
-    // SUBMARINE: アンダースロー (腰を0.37mまで深く沈め、体幹を-34°地面方向へ美しい右傾！地面スレスレ(Y≈0.18m)から上方本塁へ腕がピーンと伸びる！)
+    // SUBMARINE: アンダースロー
     armRelU = new THREE.Vector3(0.35, 0.48, 0.82);
     armRelV = armRelU.clone();
     armFolU = new THREE.Vector3(-0.45, 0.75, 0.45);
     armFolV = new THREE.Vector3(-0.35, 0.85, 0.35);
-    relPelvisPos = [0.0, 0.37, 0.88]; // 腰は0.88mへ力強く並進、軸足は地面を擦って追従
-    relPelvisRot = [22, -8, -34];
-    relSpineRot = [20, -8, -36];
-    folPelvisPos = [0.0, 0.64, 1.02];
-    folPelvisRot = [18, -24, -8];
-    folSpineRot = [16, -24, -8];
+    relPelvisPos = [0.0, 0.36, 1.15];
+    relPelvisRot = [24, -8, -34];
+    relSpineRot = [36, -8, -36];
+    folPelvisPos = [0.0, 0.58, 1.22];
+    folPelvisRot = [20, -22, -8];
+    folSpineRot = [32, -22, -8];
   }
 
   const armRelR = solveArmAnalytical(armRelU, armRelV);
@@ -862,7 +867,7 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
 
   // ⑤ ヒップファースト初動 (t=0.32)：骨盤を左腰先行で本塁方向へ並進開始。腰が沈み込むが軸足はプレート上に固定！
   const p4: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.78 : isSide ? 0.84 : 0.90, isSub ? 0.18 : 0.14),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.78 : isSide ? 0.84 : 0.90, isSub ? 0.22 : 0.18),
     pelvisQ: toQuatFromEuler(isSub ? [8, 72, -10] : isSide ? [6, 78, -4] : [2, 78, -2]),
     spineQ: toQuatFromEuler(isSub ? [10, 16, -10] : isSide ? [6, 12, -4] : [4, 8, -2]),
     rShoulderQ: armSetR.q,
@@ -880,7 +885,7 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
 
   // ⑥ 並進沈み込み (t=0.38)：腰を深く落とし本塁へ直進、軸足のタメを最大化！
   const p5: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.64 : isSide ? 0.78 : 0.84, isSub ? 0.36 : 0.28),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.64 : isSide ? 0.74 : 0.80, isSub ? 0.40 : 0.36),
     pelvisQ: toQuatFromEuler(isSub ? [12, 64, -18] : isSide ? [10, 72, -8] : [4, 72, -3]),
     spineQ: toQuatFromEuler(isSub ? [14, 18, -18] : isSide ? [8, 14, -8] : [6, 12, -3]),
     rShoulderQ: armSetR.q,
@@ -898,7 +903,7 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
 
   // ⑦ 腕の割れ・テイクバック (t=0.45)：腰がさらに本塁へ直進、軸足は強く地面を押す。右腕は円弧状テイクバック
   const p6: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.52 : isSide ? 0.70 : 0.78, isSub ? 0.54 : 0.46),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.52 : isSide ? 0.68 : 0.72, isSub ? 0.62 : 0.58),
     pelvisQ: toQuatFromEuler(isSub ? [16, 52, -24] : isSide ? [14, 64, -12] : [6, 64, -4]),
     spineQ: toQuatFromEuler(isSub ? [16, 20, -24] : isSide ? [12, 18, -12] : [8, 18, -4]),
     rShoulderQ: isSub ? armGlideSubR.q : armGlideR.q,
@@ -914,11 +919,11 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: true,
   };
 
-  // ⑧ 踏み出し足着地 (t=0.52)：左足がマウンドに力強く着地、軸足はプレートに完全固定
+  // ⑧ 踏み出し足着地 (t=0.52)：左足がマウンドに力強く着地（ステップ幅1.58mへ前進）、軸足はプレートに完全固定
   const p7: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.44 : 0.62, isSub ? 0.62 : 0.62),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.44 : 0.60, isSub ? 0.82 : 0.82),
     pelvisQ: toQuatFromEuler(isSub ? [20, 32, -30] : isSide ? [14, 36, -8] : [10, 35, 4]),
-    spineQ: toQuatFromEuler(isSub ? [18, 20, -32] : isSide ? [12, 30, -8] : [10, 30, 4]),
+    spineQ: toQuatFromEuler(isSub ? [18, 20, -32] : isSide ? [14, 30, -8] : [12, 28, 4]),
     rShoulderQ: armTopR.q,
     rElbowFlex: armTopR.flexDeg,
     lShoulderQ: armTopL.q,
@@ -932,11 +937,11 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: true,
   };
 
-  // ⑨ パワーL字トップ形成 (t=0.58)：骨盤が回転を開始し、右腕が直角のトップを形成
+  // ⑨ パワーL字トップ形成 (t=0.58)：骨盤が回転を開始し前足へ体重が乗り始め、右腕が直角のトップを形成
   const p8: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.40 : 0.60, isSub ? 0.68 : 0.68),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.40 : 0.58, isSub ? 0.98 : 0.98),
     pelvisQ: toQuatFromEuler(isSub ? [22, 16, -32] : isSide ? [16, 18, -6] : [12, 18, 4]),
-    spineQ: toQuatFromEuler(isSub ? [20, 12, -34] : isSide ? [14, 14, -6] : [10, 16, 5]),
+    spineQ: toQuatFromEuler(isSub ? [24, 12, -34] : isSide ? [18, 14, -6] : [20, 14, 2]),
     rShoulderQ: armTopR.q,
     rElbowFlex: armTopR.flexDeg,
     lShoulderQ: armTopL.q,
@@ -950,11 +955,11 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: true,
   };
 
-  // ⑩ 最大外旋 MER (t=0.63)：腰と胸が本塁へ一気に開き、肘が先行して前腕が大きくしなる（軸足はプレートにピンと一直線！）
+  // ⑩ 最大外旋 MER (t=0.63)：腰と胸が本塁へ一気に開き、肘が先行して前腕が大きくしなる（体重が前足へ力強く移動！）
   const p9: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.38 : 0.58, isSub ? 0.74 : 0.74),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.38 : 0.56, isSub ? 1.12 : 1.12),
     pelvisQ: toQuatFromEuler(isSub ? [22, 0, -34] : isSide ? [16, 0, -6] : [14, 0, 4]),
-    spineQ: toQuatFromEuler(isSub ? [20, -4, -36] : isSide ? [14, -5, -6] : [10, -5, 6]),
+    spineQ: toQuatFromEuler(isSub ? [28, -4, -36] : isSide ? [26, -5, -6] : [30, -6, 2]),
     rShoulderQ: armMerR.q,
     rElbowFlex: armMerR.flexDeg,
     lShoulderQ: armMerL.q,
@@ -968,7 +973,7 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: true,
   };
 
-  // ⑪ ボール放球 (t=0.68)：まさにボールを離す瞬間！腕がピーンと100%伸びきり、各フォームのアームスロットが一目でわかる！
+  // ⑪ ボール放球 (t=0.68)：まさにボールを離す瞬間！前足（左足）に100%体重が乗り、胸が前足膝上に深く乗る！
   const p10: QuatBonePose = {
     pelvisPos: new THREE.Vector3(relPelvisPos[0], relPelvisPos[1], relPelvisPos[2]),
     pelvisQ: toQuatFromEuler(relPelvisRot),
@@ -986,11 +991,11 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: true,
   };
 
-  // ⑫ 減速・回内 (t=0.74)：球を放した直後、右腕が左膝外側へダイナミックに巻きつき始め、体幹が深く前傾（ここで初めて軸足が地面を離れる！）
+  // ⑫ 減速・回内 (t=0.74)：球を放した直後、右腕が左膝外側へダイナミックに巻きつき、体幹がさらに深く前傾（52度）
   const p11: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.44 : isSide ? 0.72 : 0.74, isSub ? 0.94 : isSide ? 1.00 : 1.02),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.44 : 0.56, isSub ? 1.20 : 1.26),
     pelvisQ: toQuatFromEuler(isSub ? [22, -18, -20] : isSide ? [20, -18, -6] : [28, -20, 2]),
-    spineQ: toQuatFromEuler(isSub ? [20, -18, -20] : isSide ? [18, -18, -6] : [26, -20, 2]),
+    spineQ: toQuatFromEuler(isSub ? [34, -18, -20] : isSide ? [36, -18, -6] : [52, -20, 0]),
     rShoulderQ: armDecR.q,
     rElbowFlex: armDecR.flexDeg,
     lShoulderQ: armFolL.q,
@@ -1004,11 +1009,11 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
     hasBall: false,
   };
 
-  // ⑬ 腕の巻き込み (t=0.80)：左膝外側へ腕が巻きつき、軸足が浮き上がる
+  // ⑬ 腕の巻き込み (t=0.80)：左膝外側へ腕が巻きつき、軸足がフワッと浮き上がる
   const p12: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.54 : isSide ? 0.73 : 0.75, isSub ? 0.98 : isSide ? 1.02 : 1.03),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.54 : 0.60, isSub ? 1.22 : 1.28),
     pelvisQ: toQuatFromEuler(isSub ? [20, -22, -14] : isSide ? [24, -22, -6] : [32, -24, 4]),
-    spineQ: toQuatFromEuler(isSub ? [18, -22, -14] : isSide ? [22, -22, -6] : [28, -24, 4]),
+    spineQ: toQuatFromEuler(isSub ? [32, -22, -14] : isSide ? [34, -22, -6] : [48, -24, 2]),
     rShoulderQ: armWrapR.q,
     rElbowFlex: armWrapR.flexDeg,
     lShoulderQ: armFolL.q,
@@ -1042,7 +1047,7 @@ function getFormTimeline(form: PitchingFormType): { times: number[]; poses: Quat
 
   // ⑮ フィニッシュ (t=1.00)：守備姿勢へ正対、両足を着地し捕球体勢へ
   const p14: QuatBonePose = {
-    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.84 : isSide ? 0.80 : 0.88, 1.04),
+    pelvisPos: new THREE.Vector3(0.0, isSub ? 0.84 : isSide ? 0.80 : 0.86, 1.16),
     pelvisQ: toQuatFromEuler([10, -5, 0]),
     spineQ: toQuatFromEuler([8, -5, 0]),
     rShoulderQ: armRecR.q,
@@ -1495,6 +1500,26 @@ export function create3DPitcherRig(options: PlayerStyleOptions): AnimatedPitcher
       lLeg.hipBone.quaternion.copy(planted.hipQ);
       lLeg.kneeBone.rotation.set(planted.kneeFlex * DEG, 0, 0);
       lLeg.ankleBone.quaternion.copy(planted.ankleQ);
+    } else if (clamped > 0.88 && clamped <= 1.00) {
+      const targetLFoot = isSub
+        ? new THREE.Vector3(-0.12, 0.08, 1.55)
+        : isSide
+        ? new THREE.Vector3(-0.10, 0.08, 1.55)
+        : new THREE.Vector3(-0.08, 0.08, 1.58);
+      const planted = solveLeftStrideGroundContact(
+        new THREE.Vector3(-0.084, -0.04, 0),
+        pelvisBone.position,
+        pelvisBone.quaternion,
+        targetLFoot,
+        0.46,
+        0.44,
+        isSub,
+      );
+      const rawW = (clamped - 0.88) / 0.12;
+      const w = rawW * rawW * (3 - 2 * rawW);
+      lLeg.hipBone.quaternion.copy(planted.hipQ.slerp(pose.lHipQ, w));
+      lLeg.kneeBone.rotation.set((planted.kneeFlex + (pose.lKneeFlex - planted.kneeFlex) * w) * DEG, 0, 0);
+      lLeg.ankleBone.quaternion.copy(planted.ankleQ.slerp(pose.lAnkleQ, w));
     } else {
       lLeg.hipBone.quaternion.copy(pose.lHipQ);
       if (liftWeight > 0.01 && Math.abs(effLegMod) > 0.01) {
