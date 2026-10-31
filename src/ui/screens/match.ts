@@ -1366,7 +1366,7 @@ export function renderMatchScreen(): string {
               <div style="font-size:9.5px;color:#cbd5e1;font-weight:700;margin-bottom:4px">🎥 カメラ視点:</div>
               <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
                 <button data-act="bb-set-cam" data-cam="BATTER_FOCUS_VIEW" style="padding:4px 2px;font-size:9.5px;font-weight:800;border-radius:4px;border:1px solid #38bdf8;background:#0369a1;color:#fff;cursor:pointer" title="打者の表情・ヘルメット・前髪・バットを間近で観察">🔍 打者正面</button>
-                <button data-act="bb-set-cam" data-cam="SIDE_3B_VIEW" style="padding:4px 2px;font-size:9.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;cursor:pointer" title="バットのインサイドアウト軌道・インパクトを横から観察">📐 三塁真横</button>
+                <button data-act="bb-set-cam" data-cam="BATTER_SIDE_VIEW" style="padding:4px 2px;font-size:9.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;cursor:pointer" title="バットのインサイドアウト軌道・インパクトを横から観察">📐 側面真横</button>
                 <button data-act="bb-set-cam" data-cam="FRONT_SUB_VIEW" style="padding:4px 2px;font-size:9.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;cursor:pointer" title="捕手・審判目線から観察">👀 捕手目線</button>
                 <button data-act="bb-set-cam" data-cam="PITCH_VIEW" style="padding:4px 2px;font-size:9.5px;border-radius:4px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;cursor:pointer" title="TV中継センター全体カメラ">🏟️ センター</button>
               </div>
@@ -2060,6 +2060,11 @@ export function mountMatch3D(): void {
     }
     match3d.container = container;
     match3d.resize();
+    if (devModalActiveTab === 'BATTER_EDITOR') {
+      match3d.setCameraMode('BATTER_FOCUS_VIEW');
+      match3d.setBatterHandedness(batterDemoHandedness);
+      match3d.setBatterPhase(batterDemoPhase);
+    }
   } else {
     match3d = initMatch3D(
       container,
@@ -2068,15 +2073,21 @@ export function mountMatch3D(): void {
       activeMatch.teamB.capColor,
     );
 
-    // 案Bデモ設定・進行速度の初期復元
-    match3d.setPitcherForm(demoForm);
-    match3d.setPitcherThrows(demoThrows);
-    match3d.setCameraMode(demoCameraMode);
-    match3d.setPitcherModifiers(demoModifiers);
-    match3d.setPlaybackSpeed(activeMatch.speed);
-    applyDemoUniformPreset();
-    match3d.setPitcherColorMaskMode(demoColorMaskMode);
-    match3d.setPitcherPhase(demoPhase);
+    if (devModalActiveTab === 'BATTER_EDITOR') {
+      match3d.setCameraMode('BATTER_FOCUS_VIEW');
+      match3d.setBatterHandedness(batterDemoHandedness);
+      match3d.setBatterPhase(batterDemoPhase);
+    } else {
+      // 案Bデモ設定・進行速度の初期復元
+      match3d.setPitcherForm(demoForm);
+      match3d.setPitcherThrows(demoThrows);
+      match3d.setCameraMode(demoCameraMode);
+      match3d.setPitcherModifiers(demoModifiers);
+      match3d.setPlaybackSpeed(activeMatch.speed);
+      applyDemoUniformPreset();
+      match3d.setPitcherColorMaskMode(demoColorMaskMode);
+      match3d.setPitcherPhase(demoPhase);
+    }
   }
 
   // リアルタイムスライダーイベントのバインド

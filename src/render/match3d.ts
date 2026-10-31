@@ -19,7 +19,8 @@ export type CameraViewMode =
   | 'FRONT_SUB_VIEW'
   | 'IN_PLAY_WIDE'
   | 'INFIELD_CLOSEUP'
-  | 'BATTER_FOCUS_VIEW';
+  | 'BATTER_FOCUS_VIEW'
+  | 'BATTER_SIDE_VIEW';
 
 export interface Match3DScene {
   container: HTMLElement;
@@ -790,10 +791,26 @@ export function initMatch3D(
       cameraTarget = new THREE.Vector3(7.2, 0.45, -18.2);
       pitcher.setViewAngle?.('PITCH_VIEW');
     } else if (mode === 'BATTER_FOCUS_VIEW') {
-      // 打者アニメーション検証用：打者の表情・ヘルメット・バット軌道を斜め前方至近距離から観察
-      camera.fov = 24;
-      camera.position.set(2.4, 1.35, -2.6);
-      cameraTarget = new THREE.Vector3(0.65, 1.15, 0.2);
+      // 打者アニメーション検証用：打者の表情・ヘルメット・バット軌道を斜め前方至近距離から迫力観察
+      camera.fov = 30;
+      if (currentBatterHandedness === 'R') {
+        camera.position.set(0.35, 1.35, -2.1);
+        cameraTarget = new THREE.Vector3(-0.92, 1.15, 0.18);
+      } else {
+        camera.position.set(-0.35, 1.35, -2.1);
+        cameraTarget = new THREE.Vector3(0.92, 1.15, 0.18);
+      }
+      pitcher.setViewAngle?.('PITCH_VIEW');
+    } else if (mode === 'BATTER_SIDE_VIEW') {
+      // 打者真横（オープンスタンス側）からのスイングプレーン全体観察
+      camera.fov = 32;
+      if (currentBatterHandedness === 'R') {
+        camera.position.set(1.4, 1.20, 0.20);
+        cameraTarget = new THREE.Vector3(-0.92, 1.05, 0.18);
+      } else {
+        camera.position.set(-1.4, 1.20, 0.20);
+        cameraTarget = new THREE.Vector3(0.92, 1.05, 0.18);
+      }
       pitcher.setViewAngle?.('PITCH_VIEW');
     }
     camera.updateProjectionMatrix();
@@ -805,6 +822,7 @@ export function initMatch3D(
   }
 
   let playbackSpeed = 1.0;
+  let currentBatterHandedness: 'R' | 'L' = 'R';
 
   function setPitcherForm(form: PitchingFormType) {
     pitcher.setPitchingForm(form);
@@ -845,7 +863,16 @@ export function initMatch3D(
   }
 
   function setBatterHandedness(hands: 'R' | 'L') {
+    currentBatterHandedness = hands;
     batter.setHandedness(hands);
+    if (hands === 'L') {
+      batter.group.position.set(0.92, 0.02, 0.18);
+    } else {
+      batter.group.position.set(-0.92, 0.02, 0.18);
+    }
+    if (currentCameraMode === 'BATTER_FOCUS_VIEW' || currentCameraMode === 'BATTER_SIDE_VIEW') {
+      setCameraMode(currentCameraMode);
+    }
   }
 
   function setPlaybackSpeed(speed: number) {
@@ -918,30 +945,52 @@ export function initMatch3D(
   ) {
     if (currentTweenId !== null) cancelAnimationFrame(currentTweenId);
     batter.setPhase(0);
-    const totalDurationMs = 1250 / speed;
+    const totalDurationMs = 1200 / speed;
     const startTime = performance.now();
 
     function loop(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(1.0, elapsed / totalDurationMs);
 
-      // 打者スイングの緩急：
-      // progress <= 0.45: 構え〜トップタメ (0.00 -> 0.43)
-      // progress > 0.45: 踏み込み〜インパクト〜フォロースルーを一気呵成にスイング！ (0.43 -> 1.00)
-      let phase = 0;
-      if (progress <= 0.45) {
-        const s = progress / 0.45;
-        const ease = Math.sin((s * Math.PI) / 2);
-        phase = 0.4316 * ease;
+      // 【極上アニメ調タイミング】
+      // 1. 0.00〜0.38: 静かな足上げ・軸足への深いタメ（Anticipation）
+      // 2. 0.38〜0.45: トップでの一瞬のタメ（Apex Hold：爆発前の静寂）
+      // 3. 0.45〜0.58: 電光石火のダウンスイング（中抜き急加速・スウォッシュ軌跡全開）
+      // 4. 0.58〜0.66: インパクトでのヒットストップ！（一瞬のコマ停止で打球の重み・衝撃波）
+      // 5. 0.66〜0.84: 豪快な回転フォロースルー
+      // 6. 0.84〜1.00: 背中にバットを巻き付けたハイフィニッシュでピタッと静止
+      let rawPhase = 0;
+      if (progress < 0.38) {
+        const t = progress / 0.38;
+        const ease = t * t * (3 - 2 * t);
+        rawPhase = 0.4316 * ease;
+      } else if (progress < 0.45) {
+        const t = (progress - 0.38) / 0.07;
+        rawPhase = 0.4316 + t * 0.025; // トップでの微動タメ
+      } else if (progress < 0.58) {
+        const t = (progress - 0.45) / 0.13;
+        const ease = Math.pow(t, 2.4); // 爆発的ダウンスイング
+        rawPhase = 0.4566 + (0.76 - 0.4566) * ease;
+      } else if (progress < 0.65) {
+        // ヒットストップ：インパクトの瞬間でわずかに止まる
+        rawPhase = 0.76 + Math.sin(((progress - 0.58) / 0.07) * Math.PI) * 0.008;
+      } else if (progress < 0.85) {
+        const t = (progress - 0.65) / 0.20;
+        const ease = 1 - Math.pow(1 - t, 2.5);
+        rawPhase = 0.768 + (0.95 - 0.768) * ease;
       } else {
-        const s = (progress - 0.45) / 0.55;
-        const ease = Math.pow(s, 1.35);
-        phase = 0.4316 + (1.0 - 0.4316) * ease;
+        const t = (progress - 0.85) / 0.15;
+        const ease = 1 - Math.pow(1 - t, 2.0);
+        rawPhase = 0.95 + 0.05 * ease;
       }
 
-      batter.setPhase(phase);
+      // アニメ調のコマ打ち（24fpsクオンタイズ）：手描きセルアニメのキレを表現
+      const stepFrames = 95;
+      const quantPhase = Math.round(rawPhase * stepFrames) / stepFrames;
+
+      batter.setPhase(quantPhase);
       if (onPhaseUpdate) {
-        onPhaseUpdate(phase, getBatterStageLabelForPhase(phase));
+        onPhaseUpdate(quantPhase, getBatterStageLabelForPhase(quantPhase));
       }
       if (progress < 1.0) {
         currentTweenId = requestAnimationFrame(loop);
@@ -1278,7 +1327,7 @@ export function initMatch3D(
     }
   }
 
-  return {
+  const res = {
     container,
     renderer,
     scene,
@@ -1310,4 +1359,6 @@ export function initMatch3D(
     dispose,
     resize,
   };
+  (window as any).__match3dScene = res;
+  return res;
 }
