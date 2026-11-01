@@ -1886,7 +1886,9 @@ table.tbl.pl th.sortable:hover { background: #e2e8f0; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* キャラクター（打者・捕手・審判）にかぶらないよう、画面中央から審判の頭上（上部寄り）へ配置 */
+  justify-content: flex-start;
+  padding-top: max(80px, 13vh);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1940,18 +1942,18 @@ table.tbl.pl th.sortable:hover { background: #e2e8f0; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 90vw;
-  max-width: 880px;
+  width: 85vw;
+  max-width: 660px;
   pointer-events: none;
-  transform-origin: center center;
+  transform-origin: center top;
 }
 
 .callout-svg {
   width: 100%;
   height: auto;
-  max-height: 180px;
+  max-height: 125px;
   overflow: visible;
-  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.85));
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.85));
 }
 
 .callout-sub-badge {

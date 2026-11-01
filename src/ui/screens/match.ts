@@ -210,6 +210,9 @@ async function triggerImpactFeedback(outcome: PitchOutcome): Promise<void> {
   }
 
   // 3. ダイナミック・コールアウト ＆ 特大スコア演出
+  // スイングの振り抜きや捕球の瞬間をしっかり見せるため、文字が出るのを0.3秒（300ms）遅延
+  await new Promise((r) => setTimeout(r, 300));
+
   if (outcome.runsScored > 0) {
     const isPushOut = outcome.description.includes('四球') || outcome.ballResult === 'INTENTIONAL_WALK';
     const isHR = outcome.ballResult === 'IN_PLAY' && outcome.inPlayOutcome === 'HR';
