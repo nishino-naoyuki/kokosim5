@@ -1781,254 +1781,397 @@ export function createRealisticOfficial(role: 'UMPIRE' | 'CATCHER', options: Pla
   const pantsHex = numToHex(pantsColor);
 
   if (role === 'UMPIRE') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 480;
-    const ctx = canvas.getContext('2d')!;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    // 審判（球審）：3段階アクション対応（①投球間スタンド ②リリース直前クラウチ構え ③ストライク時右腕パンチアウト）
+    function drawUmpireCanvas(pose: 'STAND' | 'CROUCH' | 'STRIKE'): HTMLCanvasElement {
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d')!;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
 
-    // スラックス両脚
-    ctx.fillStyle = '#3f4956';
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 4.5;
-    ctx.beginPath();
-    ctx.moveTo(145, 250);
-    ctx.lineTo(125, 355);
-    ctx.lineTo(120, 445);
-    ctx.lineTo(155, 445);
-    ctx.lineTo(165, 355);
-    ctx.lineTo(190, 275);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+      // 共通：シューズ
+      ctx.fillStyle = '#111827';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 4;
 
-    ctx.beginPath();
-    ctx.moveTo(255, 250);
-    ctx.lineTo(275, 355);
-    ctx.lineTo(280, 445);
-    ctx.lineTo(245, 445);
-    ctx.lineTo(235, 355);
-    ctx.lineTo(210, 275);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+      if (pose === 'STAND') {
+        // ① 立ち姿勢（背筋を伸ばして普通に立っている）
+        // スラックス（直立両脚）
+        ctx.fillStyle = '#3f4956';
+        ctx.beginPath();
+        ctx.moveTo(155, 230); ctx.lineTo(145, 340); ctx.lineTo(140, 445); ctx.lineTo(178, 445); ctx.lineTo(185, 340); ctx.lineTo(195, 255);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    // 審判シューズ
-    ctx.fillStyle = '#111827';
-    ctx.beginPath();
-    ctx.ellipse(135, 452, 22, 11, 0, 0, Math.PI * 2);
-    ctx.ellipse(265, 452, 22, 11, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(245, 230); ctx.lineTo(255, 340); ctx.lineTo(260, 445); ctx.lineTo(222, 445); ctx.lineTo(215, 340); ctx.lineTo(205, 255);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    // 審判半袖シャツ（甲子園特有のライトブルーグレー）
-    ctx.fillStyle = '#8fa3b8';
-    ctx.beginPath();
-    ctx.moveTo(130, 145);
-    ctx.quadraticCurveTo(200, 130, 270, 145);
-    ctx.lineTo(285, 215);
-    ctx.lineTo(255, 260);
-    ctx.lineTo(145, 260);
-    ctx.lineTo(115, 215);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(159, 452, 22, 11, 0, 0, Math.PI * 2);
+        ctx.ellipse(241, 452, 22, 11, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
 
-    // シャツのセル影
-    ctx.fillStyle = '#6d8299';
-    ctx.beginPath();
-    ctx.moveTo(145, 220);
-    ctx.quadraticCurveTo(200, 245, 255, 220);
-    ctx.lineTo(255, 260);
-    ctx.lineTo(145, 260);
-    ctx.closePath();
-    ctx.fill();
+        // 審判半袖シャツ（直立胴体・甲子園ライトブルーグレー）
+        ctx.fillStyle = '#8fa3b8';
+        ctx.beginPath();
+        ctx.moveTo(140, 115); ctx.quadraticCurveTo(200, 105, 260, 115);
+        ctx.lineTo(275, 175); ctx.lineTo(250, 235); ctx.lineTo(150, 235); ctx.lineTo(125, 175);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    // 両腕（前傾姿勢で膝に手を添える）
-    ctx.fillStyle = '#1e293b';
-    ctx.beginPath();
-    ctx.moveTo(125, 195);
-    ctx.lineTo(138, 295);
-    ctx.lineTo(158, 295);
-    ctx.lineTo(150, 195);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+        // 両腕：両手を後ろに組む（背筋直立ポーズ）
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath(); ctx.moveTo(135, 125); ctx.lineTo(120, 185); ctx.lineTo(138, 205); ctx.lineTo(152, 145); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(265, 125); ctx.lineTo(280, 185); ctx.lineTo(262, 205); ctx.lineTo(248, 145); ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(275, 195);
-    ctx.lineTo(262, 295);
-    ctx.lineTo(242, 295);
-    ctx.lineTo(250, 195);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+        // 頭部・キャップ・マスク
+        ctx.fillStyle = '#d6a483';
+        ctx.beginPath(); ctx.arc(200, 80, 26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#18181b';
+        ctx.beginPath(); ctx.arc(200, 70, 28, Math.PI, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3.5;
+        ctx.strokeRect(176, 70, 48, 34);
+        ctx.beginPath();
+        ctx.moveTo(176, 82); ctx.lineTo(224, 82);
+        ctx.moveTo(176, 93); ctx.lineTo(224, 93);
+        ctx.moveTo(200, 70); ctx.lineTo(200, 104);
+        ctx.stroke();
 
-    // 頭部・マスク
-    ctx.fillStyle = '#d6a483';
-    ctx.beginPath();
-    ctx.arc(200, 112, 26, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+      } else if (pose === 'CROUCH') {
+        // ② 構え姿勢（キャッチャーの後ろで腰を深く落とし、前傾して両手を膝に置く）
+        ctx.fillStyle = '#3f4956';
+        ctx.beginPath();
+        ctx.moveTo(145, 250); ctx.lineTo(125, 355); ctx.lineTo(120, 445); ctx.lineTo(155, 445); ctx.lineTo(165, 355); ctx.lineTo(190, 275);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    ctx.fillStyle = '#18181b';
-    ctx.beginPath();
-    ctx.arc(200, 102, 28, Math.PI, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(255, 250); ctx.lineTo(275, 355); ctx.lineTo(280, 445); ctx.lineTo(245, 445); ctx.lineTo(235, 355); ctx.lineTo(210, 275);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 3.5;
-    ctx.strokeRect(176, 102, 48, 34);
-    ctx.beginPath();
-    ctx.moveTo(176, 114);
-    ctx.lineTo(224, 114);
-    ctx.moveTo(176, 125);
-    ctx.lineTo(224, 125);
-    ctx.moveTo(200, 102);
-    ctx.lineTo(200, 136);
-    ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(135, 452, 22, 11, 0, 0, Math.PI * 2);
+        ctx.ellipse(265, 452, 22, 11, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
 
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.48, 1.78),
-      new THREE.MeshBasicMaterial({
-        map: tex,
-        transparent: true,
-        alphaTest: 0.05,
-        side: THREE.DoubleSide,
-        toneMapped: false,
-      }),
-    );
+        // 審判半袖シャツ（前傾胴体）
+        ctx.fillStyle = '#8fa3b8';
+        ctx.beginPath();
+        ctx.moveTo(130, 145); ctx.quadraticCurveTo(200, 130, 270, 145);
+        ctx.lineTo(285, 215); ctx.lineTo(255, 260); ctx.lineTo(145, 260); ctx.lineTo(115, 215);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = '#6d8299';
+        ctx.beginPath();
+        ctx.moveTo(145, 220); ctx.quadraticCurveTo(200, 245, 255, 220); ctx.lineTo(255, 260); ctx.lineTo(145, 260); ctx.closePath(); ctx.fill();
+
+        // 両腕（前傾で両手を膝に添える構え姿勢）
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath(); ctx.moveTo(125, 195); ctx.lineTo(138, 295); ctx.lineTo(158, 295); ctx.lineTo(150, 195); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(275, 195); ctx.lineTo(262, 295); ctx.lineTo(242, 295); ctx.lineTo(250, 195); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // 頭部・マスク
+        ctx.fillStyle = '#d6a483';
+        ctx.beginPath(); ctx.arc(200, 112, 26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#18181b';
+        ctx.beginPath(); ctx.arc(200, 102, 28, Math.PI, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3.5;
+        ctx.strokeRect(176, 102, 48, 34);
+        ctx.beginPath();
+        ctx.moveTo(176, 114); ctx.lineTo(224, 114);
+        ctx.moveTo(176, 125); ctx.lineTo(224, 125);
+        ctx.moveTo(200, 102); ctx.lineTo(200, 136);
+        ctx.stroke();
+
+      } else {
+        // ③ ストライク判定時：正しく本人の「右腕」（画面向かって左側の腕）を斜め上へ力強く突き上げるパンチアウトコール！
+        // スラックス
+        ctx.fillStyle = '#3f4956';
+        ctx.beginPath();
+        ctx.moveTo(145, 250); ctx.lineTo(125, 355); ctx.lineTo(120, 445); ctx.lineTo(155, 445); ctx.lineTo(165, 355); ctx.lineTo(190, 275);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(255, 250); ctx.lineTo(275, 355); ctx.lineTo(280, 445); ctx.lineTo(245, 445); ctx.lineTo(235, 355); ctx.lineTo(210, 275);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(135, 452, 22, 11, 0, 0, Math.PI * 2);
+        ctx.ellipse(265, 452, 22, 11, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+
+        // シャツ
+        ctx.fillStyle = '#8fa3b8';
+        ctx.beginPath();
+        ctx.moveTo(130, 145); ctx.quadraticCurveTo(200, 130, 270, 145);
+        ctx.lineTo(285, 215); ctx.lineTo(255, 260); ctx.lineTo(145, 260); ctx.lineTo(115, 215);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // 左腕（画面右側：キャラクターにとっての左腕）は左膝に自然に固定
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath(); ctx.moveTo(275, 195); ctx.lineTo(262, 295); ctx.lineTo(242, 295); ctx.lineTo(250, 195); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // ★ 右腕（画面左側：キャラクターにとっての右腕）：力強いストライクパンチアウトコール！
+        // 上腕（肩から肘へ斜め上へ伸展）
+        ctx.fillStyle = '#8fa3b8'; ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(135, 155); ctx.lineTo(75, 120); ctx.lineTo(88, 95); ctx.lineTo(145, 130);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // 前腕＆握り拳（力強く斜め上へ突き上げるパンチ）
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.moveTo(80, 115); ctx.lineTo(28, 48); ctx.lineTo(46, 32); ctx.lineTo(92, 100);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // 審判の手袋・拳
+        ctx.fillStyle = '#111827';
+        ctx.beginPath();
+        ctx.arc(32, 38, 14, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+
+        // 頭部・マスク
+        ctx.fillStyle = '#d6a483';
+        ctx.beginPath(); ctx.arc(200, 112, 26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#18181b';
+        ctx.beginPath(); ctx.arc(200, 102, 28, Math.PI, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3.5;
+        ctx.strokeRect(176, 102, 48, 34);
+        ctx.beginPath();
+        ctx.moveTo(176, 114); ctx.lineTo(224, 114);
+        ctx.moveTo(176, 125); ctx.lineTo(224, 125);
+        ctx.moveTo(200, 102); ctx.lineTo(200, 136);
+        ctx.stroke();
+      }
+
+      return canvas;
+    }
+
+    const cvsStand = drawUmpireCanvas('STAND');
+    const cvsCrouch = drawUmpireCanvas('CROUCH');
+    const cvsStrike = drawUmpireCanvas('STRIKE');
+
+    const texStand = new THREE.CanvasTexture(cvsStand);
+    texStand.colorSpace = THREE.SRGBColorSpace;
+    const texCrouch = new THREE.CanvasTexture(cvsCrouch);
+    texCrouch.colorSpace = THREE.SRGBColorSpace;
+    const texStrike = new THREE.CanvasTexture(cvsStrike);
+    texStrike.colorSpace = THREE.SRGBColorSpace;
+
+    const geoStand = new THREE.PlaneGeometry(1.48, 1.78);
+    const geoCrouch = new THREE.PlaneGeometry(1.48, 1.48);
+    const geoStrike = new THREE.PlaneGeometry(1.58, 1.62);
+
+    const mat = new THREE.MeshBasicMaterial({
+      map: texStand,
+      transparent: true,
+      alphaTest: 0.05,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+
+    const plane = new THREE.Mesh(geoStand, mat);
     plane.position.set(0, 0.89, 0);
     g.add(plane);
+
+    // 審判コントローラー：ポーズ切替メソッド
+    g.userData = {
+      setPose: (pose: 'STAND' | 'CROUCH' | 'STRIKE') => {
+        if (pose === 'STAND') {
+          mat.map = texStand;
+          plane.geometry = geoStand;
+          plane.position.set(0, 0.89, 0);
+        } else if (pose === 'CROUCH') {
+          mat.map = texCrouch;
+          plane.geometry = geoCrouch;
+          plane.position.set(0, 0.74, 0);
+        } else if (pose === 'STRIKE') {
+          mat.map = texStrike;
+          plane.geometry = geoStrike;
+          plane.position.set(-0.06, 0.78, 0);
+        }
+        mat.needsUpdate = true;
+      },
+    };
+
     return g;
   }
 
-  // CATCHER（2Dスポーツアニメセル画：プロテクター・レガース・マスク・キャッチャーミット）
+  // ===========================================================================
+  // CATCHER（ユーザー様ご提示の目標イラスト準拠：極限ディープスクワット＆低重心捕手スプライト）
+  // ===========================================================================
   const canvas = document.createElement('canvas');
-  canvas.width = 420;
-  canvas.height = 440;
+  canvas.width = 512;
+  canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#0f172a';
-  ctx.lineWidth = 4;
 
-  // 太もも
+  // 地面影
+  ctx.fillStyle = 'rgba(0,0,0,0.48)';
+  ctx.beginPath();
+  ctx.ellipse(256, 470, 190, 32, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 1. お尻・股下（腰の位置を地面スレスレ Y=435 まで極限に落とす）
   ctx.fillStyle = pantsHex;
   ctx.beginPath();
-  ctx.moveTo(175, 275);
-  ctx.lineTo(118, 295);
-  ctx.lineTo(132, 340);
-  ctx.lineTo(195, 315);
+  ctx.moveTo(170, 370);
+  ctx.lineTo(256, 435); // 股の底（膝と同じか下）
+  ctx.lineTo(342, 370);
+  ctx.lineTo(320, 330);
+  ctx.lineTo(192, 330);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+
+  // お尻の影
+  ctx.fillStyle = '#334155';
+  ctx.beginPath();
+  ctx.moveTo(210, 370);
+  ctx.lineTo(256, 435);
+  ctx.lineTo(302, 370);
+  ctx.lineTo(256, 385);
+  ctx.closePath();
+  ctx.fill();
+
+  // 2. 左右の太もも（大腿部：外側に大きく開く）
+  ctx.fillStyle = pantsHex;
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 3.5;
+  // 左太もも
+  ctx.beginPath();
+  ctx.moveTo(180, 340);
+  ctx.lineTo(100, 320);
+  ctx.lineTo(120, 380);
+  ctx.lineTo(220, 410);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
+  // 右太もも
   ctx.beginPath();
-  ctx.moveTo(245, 275);
-  ctx.lineTo(302, 295);
-  ctx.lineTo(288, 340);
-  ctx.lineTo(225, 315);
+  ctx.moveTo(332, 340);
+  ctx.lineTo(412, 320);
+  ctx.lineTo(392, 380);
+  ctx.lineTo(292, 410);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // レガース
-  ctx.fillStyle = '#17253b';
-  ctx.beginPath();
-  ctx.roundRect(108, 275, 38, 130, 14);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.roundRect(274, 275, 38, 130, 14);
-  ctx.fill();
-  ctx.stroke();
-
-  // レガースの膝パッドハイライト
-  ctx.fillStyle = '#293d5c';
-  ctx.beginPath();
-  ctx.arc(127, 295, 13, 0, Math.PI * 2);
-  ctx.arc(293, 295, 13, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  // スパイク
+  // 3. レガース（すね当て・膝カップ・スパイク）
+  // スパイク（つま先立ち）
   ctx.fillStyle = '#111827';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.ellipse(125, 408, 22, 11, 0, 0, Math.PI * 2);
-  ctx.ellipse(295, 408, 22, 11, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  // 両肩・アンダーシャツ袖
-  ctx.fillStyle = underHex;
-  ctx.beginPath();
-  ctx.moveTo(140, 155);
-  ctx.lineTo(105, 205);
-  ctx.lineTo(135, 220);
-  ctx.lineTo(160, 175);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  ctx.moveTo(60, 455); ctx.lineTo(120, 465); ctx.lineTo(110, 425); ctx.lineTo(75, 420);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(280, 155);
-  ctx.lineTo(315, 205);
-  ctx.lineTo(285, 220);
-  ctx.lineTo(260, 175);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  ctx.moveTo(452, 455); ctx.lineTo(392, 465); ctx.lineTo(402, 425); ctx.lineTo(437, 420);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  // チェストプロテクター
-  ctx.fillStyle = '#17253b';
+  // レガースすね部（ロイヤルブルー/ネイビー）
+  ctx.fillStyle = '#1d4ed8';
   ctx.beginPath();
-  ctx.moveTo(152, 145);
-  ctx.lineTo(268, 145);
-  ctx.lineTo(258, 285);
-  ctx.lineTo(210, 302);
-  ctx.lineTo(162, 285);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  ctx.moveTo(65, 330); ctx.lineTo(115, 310); ctx.lineTo(130, 425); ctx.lineTo(70, 435);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  // クッションリブ
-  ctx.strokeStyle = '#334968';
-  ctx.lineWidth = 2.5;
-  for (let py = 175; py <= 265; py += 28) {
-    ctx.beginPath();
-    ctx.moveTo(164, py);
-    ctx.lineTo(256, py);
-    ctx.stroke();
-  }
+  ctx.beginPath();
+  ctx.moveTo(447, 330); ctx.lineTo(397, 310); ctx.lineTo(382, 425); ctx.lineTo(442, 435);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  // 頭部 ＆ キャッチャーマスク
+  // 膝カップ（丸みとハイライト）
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath(); ctx.arc(90, 310, 35, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(422, 310, 35, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = '#93c5fd';
+  ctx.beginPath(); ctx.ellipse(82, 300, 16, 22, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(430, 300, 16, 22, 0.3, 0, Math.PI * 2); ctx.fill();
+
+  // レガースのリブバンド
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 4;
+  for (let y = 350; y <= 410; y += 20) {
+    ctx.beginPath(); ctx.moveTo(70, y); ctx.lineTo(125, y - 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(442, y); ctx.lineTo(387, y - 5); ctx.stroke();
+  }
+
+  // 4. 上半身・ユニフォーム袖
+  ctx.fillStyle = underHex;
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(175, 170); ctx.lineTo(105, 220); ctx.lineTo(145, 270); ctx.lineTo(185, 220);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(337, 170); ctx.lineTo(407, 220); ctx.lineTo(367, 270); ctx.lineTo(327, 220);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // 5. プロテクター（両太ももの間に深く沈み込むブロックデザイン）
+  ctx.fillStyle = '#1e3a8a';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(180, 165);
+  ctx.lineTo(332, 165);
+  ctx.lineTo(325, 280);
+  ctx.lineTo(285, 345);
+  ctx.lineTo(256, 355);
+  ctx.lineTo(227, 345);
+  ctx.lineTo(187, 280);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // プロテクタークッションブロック
+  ctx.fillStyle = '#2563eb';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(205, 175, 102, 38, 6); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(195, 222, 54, 46, 4); ctx.roundRect(263, 222, 54, 46, 4); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(205, 276, 46, 42, 4); ctx.roundRect(261, 276, 46, 42, 4); ctx.fill(); ctx.stroke();
+
+  // 6. 首・スロートガード
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(236, 135, 40, 35);
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.moveTo(232, 150); ctx.lineTo(280, 150); ctx.lineTo(266, 175); ctx.lineTo(246, 175);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // 7. ヘルメット・マスク
   ctx.fillStyle = capHex;
-  ctx.beginPath();
-  ctx.arc(210, 105, 31, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
+  ctx.beginPath(); ctx.arc(256, 95, 42, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 4; ctx.stroke();
 
-  ctx.fillStyle = '#d6a483';
-  ctx.beginPath();
-  ctx.ellipse(210, 106, 18, 14, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
+  ctx.fillStyle = '#fde047';
+  ctx.beginPath(); ctx.ellipse(256, 105, 26, 22, 0, 0, Math.PI * 2); ctx.fill();
 
+  ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(240, 102); ctx.lineTo(250, 105); ctx.moveTo(272, 102); ctx.lineTo(262, 105); ctx.stroke();
+
+  // マスク金属フレーム
+  ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 3.5;
+  ctx.strokeRect(228, 85, 56, 48);
+  ctx.beginPath();
+  ctx.moveTo(242, 85); ctx.lineTo(242, 133);
+  ctx.moveTo(256, 85); ctx.lineTo(256, 133);
+  ctx.moveTo(270, 85); ctx.lineTo(270, 133);
+  ctx.moveTo(228, 98); ctx.lineTo(284, 98);
+  ctx.moveTo(228, 110); ctx.lineTo(284, 110);
+  ctx.moveTo(228, 122); ctx.lineTo(284, 122);
+  ctx.stroke();
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  // 低重心ディープスクワットに合わせたプレーンサイズ（幅1.42m、高さ1.08m）
   const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.55, 1.62),
+    new THREE.PlaneGeometry(1.42, 1.08),
     new THREE.MeshBasicMaterial({
       map: tex,
       transparent: true,
@@ -2037,7 +2180,8 @@ export function createRealisticOfficial(role: 'UMPIRE' | 'CATCHER', options: Pla
       toneMapped: false,
     }),
   );
-  plane.position.set(0, 0.81, 0);
+  // 足元が地面(Y=0)にぴったり接地するよう、中心Y=0.54mに配置
+  plane.position.set(0, 0.54, 0);
   g.add(plane);
 
   // リアル写真テクスチャによる高精細3Dキャッチャーミット（ZETT赤革プロステイタス仕様）
@@ -2053,7 +2197,8 @@ export function createRealisticOfficial(role: 'UMPIRE' | 'CATCHER', options: Pla
     toneMapped: false,
   });
   const mittMesh = new THREE.Mesh(mittGeo, mittMat);
-  mittMesh.position.set(0.295, 0.773, 0.04);
+  // 低蹲姿勢の胸元・両膝の間に構える（Y=0.50m）
+  mittMesh.position.set(0.24, 0.50, 0.04);
   mittMesh.rotation.z = -0.06;
   g.add(mittMesh);
 

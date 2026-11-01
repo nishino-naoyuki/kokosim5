@@ -738,8 +738,9 @@ export function initMatch3D(
     shirtColor: 0x1e293b,
     pantsColor: 0x334155,
   });
-  umpireMesh.position.set(-0.18, 0.02, 2.05);
+  umpireMesh.position.set(-0.16, 0.02, 1.95);
   umpireMesh.rotation.y = Math.PI; // カメラ（-Z）に正対
+  umpireMesh.userData.setPose?.('STAND'); // 初期は直立立ち姿勢
   scene.add(umpireMesh);
 
   // 8. 投球ボール（硬式野球公認球サイズ：半径0.0375m＝直径7.5cm、従来の0.075mから半分に縮小）
@@ -1065,10 +1066,12 @@ export function initMatch3D(
     pitcher.setPhase(0);
     batter.setPhase(0);
     ball.visible = false;
+    // 審判：投球間は普通に立っている
+    umpireMesh.userData.setPose?.('STAND');
 
-    // キャッチャーミット（捕球位置への動的シフト用準備）
+    // キャッチャーミット（低重心ディープスクワット姿勢に合わせた待機位置）
     const catcherMitt = catcherMesh.children[1] as THREE.Mesh | undefined;
-    const initialMittPos = { x: 0.295, y: 0.773, z: 0.04 };
+    const initialMittPos = { x: 0.24, y: 0.50, z: 0.04 };
     if (catcherMitt) {
       catcherMitt.position.set(initialMittPos.x, initialMittPos.y, initialMittPos.z);
       catcherMitt.rotation.z = -0.06;
@@ -1099,6 +1102,11 @@ export function initMatch3D(
           : windupProgress * 0.68;
         pitcher.setPhase(pitchPhase);
         ball.visible = false;
+
+        // 審判：投手がリリースの直前（windupProgress >= 0.72）に腰を落として構える
+        if (windupProgress >= 0.72) {
+          umpireMesh.userData.setPose?.('CROUCH');
+        }
 
         // 打者：投手の足上げと完全に同調し、軸足にタメてすり足でトップ姿勢へ（Frame 0 ➜ Frame 41: phase 0.00 ➔ 0.4316）
         const loadProgress = Math.min(1.0, elapsed / (windupDurationMs * 0.92));
@@ -1182,6 +1190,17 @@ export function initMatch3D(
       if (!impactFired) {
         impactFired = true;
         onImpact?.(outcome);
+
+        // 審判：ストライクなら右手を上げる（パンチアウトコール！）、ボールなら構え維持
+        const isStrike =
+          outcome.ballResult === 'CALLED_STRIKE' ||
+          outcome.ballResult === 'SWINGING_STRIKE' ||
+          outcome.ballResult === 'FOUL';
+        if (isStrike) {
+          umpireMesh.userData.setPose?.('STRIKE');
+        } else {
+          umpireMesh.userData.setPose?.('CROUCH');
+        }
       }
 
       // -------------------------------------------------------------
@@ -1214,6 +1233,7 @@ export function initMatch3D(
       // -------------------------------------------------------------
       if (outcome.ballResult === 'IN_PLAY' && currentCameraMode === 'PITCH_VIEW') {
         batter.setPhase(1.0); // 振り抜きの豪快なハイフィニッシュ
+        umpireMesh.userData.setPose?.('STAND');
         playBattedBallAnimation(outcome, onComplete);
       } else {
         if (isSwing) {
@@ -1236,6 +1256,8 @@ export function initMatch3D(
           }
           ball.visible = false;
           ball.position.set(0.18, 1.82, -MOUND_DISTANCE + 1.2);
+          // 審判：投球シークエンス終了後は普通に立つ
+          umpireMesh.userData.setPose?.('STAND');
           if (onComplete) onComplete();
         }, finishHoldMs);
       }

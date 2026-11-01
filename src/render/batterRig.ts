@@ -1084,12 +1084,10 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
 
     const currentFrameFloat = frameIdx0 + alpha;
 
-    // ★ 構え時の自然な膝関節屈曲（30cm前方に湾曲していたゴム脚を、前傾14cmの引き締まった関節屈曲へ）
-    // および肩案Bに合わせた構え手首・バット位置の連動調整
+    // ★ 構え手首・バット位置の肩案B連動調整
+    // （※ 膝は元のボーンデータの自然な前方関節屈曲を100%維持し、逆関節を防止）
     if (currentFrameFloat < 42) {
       const blend = Math.max(0, 1 - (currentFrameFloat - 32) / 10);
-      knR[2] = knR[2] - 0.15 * blend;
-      knL[2] = knL[2] - 0.15 * blend;
       wrR[1] += 0.08 * blend;
       wrL[1] += 0.08 * blend;
       batTip[1] += 0.10 * blend;
@@ -1150,21 +1148,22 @@ export function create3DBatterRig(options: PlayerStyleOptions): AnimatedBatter3D
       legGuardGroup.rotation.y = (pelvisOpenDeg - 45) * DEG;
     }
 
-    // ⑥ 頭部・ヘルメット
+    // ⑥ 頭部・ヘルメット（投手マウンドのリリースポイント Z=-18.44m を完全に凝視・正対）
     const headCenterY = neck[1] + (head[1] - neck[1]) * 0.52;
     headGroup.position.set(head[0], headCenterY, head[2]);
 
+    const baseLookAngle = isLefty ? -Math.PI * 0.55 : Math.PI * 0.55;
     if (currentFrameFloat < 70) {
-      headGroup.rotation.set(0, Math.PI * 0.38, 0);
+      headGroup.rotation.set(0.04, baseLookAngle, -0.03);
       headMat.uniforms.uMap.value = headTexFocused;
     } else if (currentFrameFloat <= 80) {
       // インパクトゾーン：食いしばり表情＆強烈な視線
       const t = (currentFrameFloat - 70) / 10;
-      headGroup.rotation.set(0.12 * t, Math.PI * (0.38 - 0.28 * t), -0.08 * t);
+      headGroup.rotation.set(0.12 * t, baseLookAngle - 0.28 * t * (isLefty ? -1 : 1), -0.08 * t);
       headMat.uniforms.uMap.value = headTexClenched;
     } else {
       const t = Math.min(1.0, (currentFrameFloat - 80) / 15);
-      headGroup.rotation.set(0.08, Math.PI * 0.10 + 0.15 * t, -0.05);
+      headGroup.rotation.set(0.08, baseLookAngle * 0.25 + 0.15 * t, -0.05);
       headMat.uniforms.uMap.value = headTexFocused;
     }
 
